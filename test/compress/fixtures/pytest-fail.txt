@@ -1,0 +1,58 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.6, pytest-7.4.3, pluggy-1.3.0
+rootdir: /home/dev/billing
+configfile: pyproject.toml
+plugins: cov-4.1.0, asyncio-0.21.1
+asyncio: mode=Mode.STRICT
+collected 214 items
+
+tests/test_invoices.py ......................F.........                  [ 15%]
+tests/test_payments.py ........................................          [ 34%]
+tests/test_refunds.py ..........E.......                                 [ 42%]
+tests/test_taxes.py ........................................................ [ 68%]
+tests/test_webhooks.py ..................................................... [ 93%]
+tests/test_utils.py ...............                                      [100%]
+
+==================================== ERRORS ====================================
+_____________________ ERROR at setup of test_partial_refund ______________________
+
+    @pytest.fixture
+    def stripe_client():
+>       return StripeClient(api_key=os.environ["STRIPE_TEST_KEY"])
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = environ({'PATH': '/home/dev/.venv/bin:/usr/bin', 'HOME': '/home/dev'})
+key = 'STRIPE_TEST_KEY'
+
+    def __getitem__(self, key):
+        try:
+            value = self._data[self.encodekey(key)]
+        except KeyError:
+            # raise KeyError with the original key value
+>           raise KeyError(key) from None
+E           KeyError: 'STRIPE_TEST_KEY'
+
+/usr/lib/python3.11/os.py:679: KeyError
+=================================== FAILURES ===================================
+_________________________ test_invoice_total_rounding __________________________
+
+    def test_invoice_total_rounding():
+        invoice = Invoice(lines=[Line(qty=3, unit_price=Decimal("19.99"))], tax_rate=Decimal("0.21"))
+>       assert invoice.total == Decimal("72.56")
+E       AssertionError: assert Decimal('72.57') == Decimal('72.56')
+E        +  where Decimal('72.57') = <Invoice id=None lines=1>.total
+E        +  and   Decimal('72.56') = Decimal('72.56')
+
+tests/test_invoices.py:88: AssertionError
+=============================== warnings summary ===============================
+tests/test_webhooks.py::test_signature_tolerance
+  /home/dev/billing/billing/webhooks.py:42: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_invoices.py::test_invoice_total_rounding - AssertionError: assert Decimal('72.57') == Decimal('72.56')
+ERROR tests/test_refunds.py::test_partial_refund - KeyError: 'STRIPE_TEST_KEY'
+============== 1 failed, 212 passed, 1 warning, 1 error in 3.42s ===============

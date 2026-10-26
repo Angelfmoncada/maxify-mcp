@@ -1,0 +1,11 @@
+{
+  "id": "rename-and-reopen",
+  "title": "Rename a service method, then build a feature on the renamed code",
+  "category": "post-edit",
+  "prompt": "Do these two steps in order.\n\nStep 1: rename the method `TaskService.updateStatus` to `TaskService.changeStatus`. Update every caller, every test and every mention in the docs (README.md and docs/) so that nothing in the repository refers to the old name any more.\n\nStep 2: once the rename is done, add `TaskService.reopen(actor, id)`, which moves a `done` task back to `in_progress` by calling `changeStatus`, so the same ownership and transition rules apply. Add a route `POST /tasks/:id/reopen` (no body, authentication and write access like the other task write routes) that responds 200 with the updated task. Reopening a task that is not `done` must respond 409.\n\nKeep `npm test` green.",
+  "maxTurns": 45,
+  "timeoutMs": 1200000,
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": false }
+}

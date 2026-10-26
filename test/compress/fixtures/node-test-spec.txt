@@ -1,0 +1,72 @@
+▶ parseConfig
+  ✔ reads defaults (0.812ms)
+  ✔ merges env overrides (0.301ms)
+  ✔ resolves relative paths against the config file (0.254ms)
+  ✖ rejects unknown keys (1.92ms)
+    AssertionError [ERR_ASSERTION]: Missing expected exception (ConfigError).
+        at TestContext.<anonymous> (file:///home/dev/cli/test/config.test.js:41:12)
+        at Test.runInAsyncScope (node:async_hooks:206:9)
+        at Test.run (node:internal/test_runner/test:631:25)
+        at Suite.processPendingSubtests (node:internal/test_runner/test:374:18)
+        at Test.postRun (node:internal/test_runner/test:715:19)
+        at Test.run (node:internal/test_runner/test:673:12)
+        at async Suite.processPendingSubtests (node:internal/test_runner/test:374:7) {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: undefined,
+      expected: [class ConfigError extends Error],
+      operator: 'throws'
+    }
+
+  ✔ supports JSON with comments (0.444ms)
+▶ parseConfig (4.511ms)
+
+▶ formatTable
+  ✔ pads columns (0.512ms)
+  ✔ truncates long cells with an ellipsis (0.198ms)
+  ✔ right-aligns numbers (0.171ms)
+  ✔ handles wide unicode characters (0.233ms)
+▶ formatTable (1.402ms)
+
+▶ cli
+  ✔ prints help with --help (23.11ms)
+  ✔ prints the version with -v (19.82ms)
+  ✔ exits with code 2 on unknown flags (18.04ms)
+  ✔ reads stdin when no file is given (25.66ms)
+  ✔ writes JSON with --json (21.37ms)
+  ﹣ supports --watch (0.091ms) # SKIP
+▶ cli (110.6ms)
+
+▶ semver
+  ✔ compares prerelease tags (0.31ms)
+  ✔ sorts build metadata last (0.12ms)
+  ✔ parses loose versions (0.21ms)
+▶ semver (0.9ms)
+
+ℹ tests 18
+ℹ suites 4
+ℹ pass 16
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 312.4501
+
+✖ failing tests:
+
+test at file:///home/dev/cli/test/config.test.js:38:3
+✖ rejects unknown keys (1.92ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception (ConfigError).
+      at TestContext.<anonymous> (file:///home/dev/cli/test/config.test.js:41:12)
+      at Test.runInAsyncScope (node:async_hooks:206:9)
+      at Test.run (node:internal/test_runner/test:631:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:374:18)
+      at Test.postRun (node:internal/test_runner/test:715:19)
+      at Test.run (node:internal/test_runner/test:673:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:374:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [class ConfigError extends Error],
+    operator: 'throws'
+  }

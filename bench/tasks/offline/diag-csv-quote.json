@@ -1,0 +1,13 @@
+{
+  "id": "diag-csv-quote",
+  "category": "diagnosis",
+  "prompt": "The CSV export mangles a task whose title contains a double quote, for example Fix \"login\" bug. Where is the CSV escaping implemented and how does the export call it?",
+  "required": [
+    { "ref": "src/server/lib/legacy-csv.cjs#escapeCell", "level": "source" },
+    { "ref": "src/server/lib/legacy-csv.cjs#toCsv", "level": "source" },
+    { "ref": "src/server/tasks/export.ts#tasksToCsv", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#exportTasksHandler", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "notes": "The escaping lives in a CommonJS module that the TypeScript export loads through createRequire, so the import graph needs CommonJS awareness."
+}

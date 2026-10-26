@@ -1,0 +1,17 @@
+{
+  "id": "mm-assign-task",
+  "category": "multi-module",
+  "prompt": "Implement task assignment: a task gets an assigneeId (a user id or null), set through a new endpoint PATCH /tasks/:id/assignee by the task owner or an admin, and the assignee must be an existing user.",
+  "required": [
+    { "ref": "src/shared/types.ts#Task", "level": "source" },
+    { "ref": "src/server/tasks/repository.ts#TaskRepository.create", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#TaskService.constructor", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#TaskService.update", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#TaskService.getModifiable", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#registerTaskRoutes", "level": "source" },
+    { "ref": "src/server/app.ts#createApp", "level": "source" },
+    { "ref": "src/server/users/repository.ts#UserRepository.findById", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "notes": "Touches the shared type, storage defaults, the service (which needs a user lookup injected), the route table and the app wiring."
+}

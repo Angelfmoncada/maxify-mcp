@@ -1,0 +1,165 @@
+diff --git a/README.md b/README.md
+index 86382bf..a4922a3 100644
+--- a/README.md
++++ b/README.md
+@@ -58,6 +58,7 @@ All routes except `/health`, `/auth/register` and `/auth/login` need an `Authori
+ | `POST /tasks`               | admin, member      | Create a task                                      |
+ | `PATCH /tasks/:id`          | owner or admin     | Change title, description, priority or due date    |
+ | `POST /tasks/:id/status`    | owner or admin     | Move a task to another status                      |
++| `POST /tasks/:id/reopen`    | owner or admin     | Move a finished task back to `in_progress`         |
+ | `DELETE /tasks/:id`         | owner or admin     | Delete a task                                      |
+ 
+ `GET /tasks` accepts `status` (comma separated), `owner`, `q` (search), `overdue`, `sort`
+@@ -77,7 +78,7 @@ Errors share one shape: `{ "error": { "code", "message", "details" } }` with the
+ ## Task statuses
+ 
+ Tasks start in `todo` and move through `in_progress` and `in_review` to `done`. Allowed moves are defined in
+-`src/server/tasks/transitions.ts`; `TaskService.updateStatus` rejects anything else with a 409. A finished task
++`src/server/tasks/transitions.ts`; `TaskService.changeStatus` rejects anything else with a 409. A finished task
+ can only be reopened into `in_progress`.
+ 
+ ## Plugins
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 9911145..d9f3b7e 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -57,7 +57,7 @@ change an existing task. `TaskService.getModifiable` applies that rule and build
+ ## Task lifecycle
+ 
+ Statuses are `todo`, `in_progress`, `in_review` and `done`. `tasks/transitions.ts` is the single source of
+-truth for allowed moves. `TaskService.updateStatus` calls `assertTransition`, so the rule applies to admins too.
++truth for allowed moves. `TaskService.changeStatus` calls `assertTransition`, so the rule applies to admins too.
+ 
+ | From          | Allowed targets                   |
+ | ------------- | --------------------------------- |
+diff --git a/src/server/tasks/routes.ts b/src/server/tasks/routes.ts
+index 104b520..2d2d8e1 100644
+--- a/src/server/tasks/routes.ts
++++ b/src/server/tasks/routes.ts
+@@ -28,7 +28,11 @@ export function updateTaskHandler(service: TaskService): Handler {
+ 
+ export function changeStatusHandler(service: TaskService): Handler {
+   return (request) =>
+-    ok(service.updateStatus(currentUser(request), request.params.id ?? '', request.body));
++    ok(service.changeStatus(currentUser(request), request.params.id ?? '', request.body));
++}
++
++export function reopenTaskHandler(service: TaskService): Handler {
++  return (request) => ok(service.reopen(currentUser(request), request.params.id ?? ''));
+ }
+ 
+ export function deleteTaskHandler(service: TaskService): Handler {
+@@ -53,5 +57,6 @@ export function registerTaskRoutes(router: Router, deps: TaskRouteDeps): void {
+   router.get('/tasks/:id', getTaskHandler(service), [authenticate]);
+   router.patch('/tasks/:id', updateTaskHandler(service), [authenticate, canWrite]);
+   router.post('/tasks/:id/status', changeStatusHandler(service), [authenticate, canWrite]);
++  router.post('/tasks/:id/reopen', reopenTaskHandler(service), [authenticate, canWrite]);
+   router.delete('/tasks/:id', deleteTaskHandler(service), [authenticate, canWrite]);
+ }
+diff --git a/src/server/tasks/service.ts b/src/server/tasks/service.ts
+index c020636..53de935 100644
+--- a/src/server/tasks/service.ts
++++ b/src/server/tasks/service.ts
+@@ -1,4 +1,4 @@
+-import { ForbiddenError, NotFoundError } from '../../shared/errors.ts';
++import { ConflictError, ForbiddenError, NotFoundError } from '../../shared/errors.ts';
+ import { validateStatus, validateTaskInput, validateTaskPatch } from '../../shared/validation.ts';
+ import type { AuthUser, Page, Task } from '../../shared/types.ts';
+ import type { TaskEventBus } from './events.ts';
+@@ -55,7 +55,7 @@ export class TaskService {
+     return task;
+   }
+ 
+-  updateStatus(actor: AuthUser, id: string, rawStatus: unknown): Task {
++  changeStatus(actor: AuthUser, id: string, rawStatus: unknown): Task {
+     const before = this.getModifiable(actor, id, 'change the status of');
+     const status = validateStatus(rawStatus);
+     assertTransition(before.status, status);
+@@ -64,6 +64,15 @@ export class TaskService {
+     return task;
+   }
+ 
++  /** Moves a finished task back to in_progress under the same rules as any other status change. */
++  reopen(actor: AuthUser, id: string): Task {
++    const task = this.get(id);
++    if (task.status !== 'done') {
++      throw new ConflictError(`Only finished tasks can be reopened (this one is ${task.status})`);
++    }
++    return this.changeStatus(actor, id, 'in_progress');
++  }
++
+   delete(actor: AuthUser, id: string): void {
+     const task = this.getModifiable(actor, id, 'delete');
+     this.repository.delete(id);
+diff --git a/test/task-service.test.ts b/test/task-service.test.ts
+index 95377ed..852df43 100644
+--- a/test/task-service.test.ts
++++ b/test/task-service.test.ts
+@@ -86,11 +86,11 @@ describe('TaskService.update', () => {
+   });
+ });
+ 
+-describe('TaskService.updateStatus', () => {
++describe('TaskService.changeStatus', () => {
+   it('walks a task through the board and records the previous status', () => {
+     const task = service.create(owner, { title: 'Ship v2' });
+-    service.updateStatus(owner, task.id, 'in_progress');
+-    const done = service.updateStatus(owner, task.id, { status: 'done' });
++    service.changeStatus(owner, task.id, 'in_progress');
++    const done = service.changeStatus(owner, task.id, { status: 'done' });
+     assert.equal(done.status, 'done');
+     const event = events.at(-1);
+     assert.equal(event?.type === 'task.status_changed' ? event.from : '', 'in_progress');
+@@ -98,18 +98,39 @@ describe('TaskService.updateStatus', () => {
+ 
+   it('rejects moves that the board does not allow', () => {
+     const task = service.create(owner, { title: 'Ship v2' });
+-    assert.throws(() => service.updateStatus(owner, task.id, 'done'), ConflictError);
++    assert.throws(() => service.changeStatus(owner, task.id, 'done'), ConflictError);
+   });
+ 
+   it('applies the transition rules to admins as well', () => {
+     const task = service.create(owner, { title: 'Ship v2' });
+-    assert.throws(() => service.updateStatus(admin, task.id, 'in_review'), ConflictError);
++    assert.throws(() => service.changeStatus(admin, task.id, 'in_review'), ConflictError);
+   });
+ 
+   it('forbids viewers and strangers', () => {
+     const task = service.create(owner, { title: 'Ship v2' });
+-    assert.throws(() => service.updateStatus(viewer, task.id, 'in_progress'), ForbiddenError);
+-    assert.throws(() => service.updateStatus(stranger, task.id, 'in_progress'), ForbiddenError);
++    assert.throws(() => service.changeStatus(viewer, task.id, 'in_progress'), ForbiddenError);
++    assert.throws(() => service.changeStatus(stranger, task.id, 'in_progress'), ForbiddenError);
++  });
++});
++
++describe('TaskService.reopen', () => {
++  it('moves a finished task back to in_progress', () => {
++    const task = service.create(owner, { title: 'Ship v2' });
++    service.changeStatus(owner, task.id, 'in_progress');
++    service.changeStatus(owner, task.id, 'done');
++    assert.equal(service.reopen(owner, task.id).status, 'in_progress');
++  });
++
++  it('refuses tasks that are not finished', () => {
++    const task = service.create(owner, { title: 'Ship v2' });
++    assert.throws(() => service.reopen(owner, task.id), ConflictError);
++  });
++
++  it('keeps the ownership rule', () => {
++    const task = service.create(owner, { title: 'Ship v2' });
++    service.changeStatus(owner, task.id, 'in_progress');
++    service.changeStatus(owner, task.id, 'done');
++    assert.throws(() => service.reopen(stranger, task.id), ForbiddenError);
+   });
+ });
+ 
+@@ -132,7 +153,7 @@ describe('TaskService.list', () => {
+   it('filters by status through the query string', () => {
+     const first = service.create(owner, { title: 'one' });
+     service.create(owner, { title: 'two' });
+-    service.updateStatus(owner, first.id, 'in_progress');
++    service.changeStatus(owner, first.id, 'in_progress');
+     const page = service.list({ status: 'in_progress' });
+     assert.deepEqual(page.items.map((task) => task.title), ['one']);
+     assert.equal(page.total, 1);

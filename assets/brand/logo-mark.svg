@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Maxify</title>
+  <!-- Maxify mark, 32-unit grid. Context lines are held by a bracket; only the exact line passes through its slot. -->
+  <path fill="#0F1A2A" d="M7 0H25A7 7 0 0 1 32 7V25A7 7 0 0 1 25 32H7A7 7 0 0 1 0 25V7A7 7 0 0 1 7 0Z"/>
+  <path fill="#56677F" d="M6 5H15V7H6ZM6 9H18V11H6ZM6 21H17V23H6ZM6 25H12V27H6Z"/>
+  <path fill="#F4F6F9" d="M21 4H23V12H21ZM19 4H21V6H19ZM21 20H23V28H21ZM19 26H21V28H19Z"/>
+  <path fill="#FFB938" d="M6 14H27V18H6Z"/>
+</svg>

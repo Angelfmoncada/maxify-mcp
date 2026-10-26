@@ -1,0 +1,219 @@
+diff --git a/src/server/app.ts b/src/server/app.ts
+index 265bb0c..05e0fcd 100644
+--- a/src/server/app.ts
++++ b/src/server/app.ts
+@@ -49,7 +49,7 @@ export function createApp(options: AppOptions = {}): App {
+     ttlSeconds: config.tokenTtlSeconds,
+     now: () => now().getTime(),
+   });
+-  const tasks = new TaskService(taskRepository, events, now);
++  const tasks = new TaskService(taskRepository, events, now, users);
+   const authenticate = requireAuth(config.tokenSecret, () => now().getTime());
+ 
+   const router = new Router();
+diff --git a/src/server/tasks/filters.ts b/src/server/tasks/filters.ts
+index 8270810..605b683 100644
+--- a/src/server/tasks/filters.ts
++++ b/src/server/tasks/filters.ts
+@@ -9,6 +9,7 @@ export type TaskSortKey = 'createdAt' | 'dueDate' | 'priority' | 'title';
+ export interface TaskFilter {
+   status?: TaskStatus[];
+   ownerId?: string;
++  assigneeId?: string;
+   /** Case-insensitive substring searched in title and description. */
+   search?: string;
+   overdue?: boolean;
+@@ -51,6 +52,7 @@ export function parseTaskFilter(query: Record<string, string>): TaskFilter {
+     filter.status = statuses as TaskStatus[];
+   }
+   if (query.owner !== undefined) filter.ownerId = query.owner;
++  if (query.assignee !== undefined) filter.assigneeId = query.assignee;
+   if (query.q !== undefined && query.q.trim().length > 0) filter.search = query.q.trim();
+   if (query.overdue !== undefined) filter.overdue = query.overdue === 'true';
+   if (query.sort !== undefined) {
+@@ -75,6 +77,7 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter, now: Dat
+       return false;
+     }
+     if (filter.ownerId !== undefined && task.ownerId !== filter.ownerId) return false;
++    if (filter.assigneeId !== undefined && task.assigneeId !== filter.assigneeId) return false;
+     if (filter.overdue !== undefined && isOverdue(task, now) !== filter.overdue) return false;
+     if (search !== undefined) {
+       const haystack = `${task.title}\n${task.description}`.toLowerCase();
+diff --git a/src/server/tasks/repository.ts b/src/server/tasks/repository.ts
+index afd1cff..f6d7bd0 100644
+--- a/src/server/tasks/repository.ts
++++ b/src/server/tasks/repository.ts
+@@ -3,7 +3,7 @@ import { createId } from '../../shared/utils.ts';
+ import type { Task, TaskInput } from '../../shared/types.ts';
+ 
+ /** Fields that may change after creation. Identity, owner and timestamps are managed by the repository. */
+-export type TaskChanges = Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'dueDate'>>;
++export type TaskChanges = Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'dueDate' | 'assigneeId'>>;
+ 
+ /** In-memory task store. Stored tasks are never mutated; updates replace them with a new object. */
+ export class TaskRepository {
+@@ -18,6 +18,7 @@ export class TaskRepository {
+       status: 'todo',
+       priority: input.priority ?? 'medium',
+       ownerId,
++      assigneeId: null,
+       dueDate: input.dueDate ?? null,
+       createdAt: timestamp,
+       updatedAt: timestamp,
+diff --git a/src/server/tasks/routes.ts b/src/server/tasks/routes.ts
+index 104b520..0075bc7 100644
+--- a/src/server/tasks/routes.ts
++++ b/src/server/tasks/routes.ts
+@@ -31,6 +31,10 @@ export function changeStatusHandler(service: TaskService): Handler {
+     ok(service.updateStatus(currentUser(request), request.params.id ?? '', request.body));
+ }
+ 
++export function assignTaskHandler(service: TaskService): Handler {
++  return (request) => ok(service.assign(currentUser(request), request.params.id ?? '', request.body));
++}
++
+ export function deleteTaskHandler(service: TaskService): Handler {
+   return (request) => {
+     service.delete(currentUser(request), request.params.id ?? '');
+@@ -53,5 +57,6 @@ export function registerTaskRoutes(router: Router, deps: TaskRouteDeps): void {
+   router.get('/tasks/:id', getTaskHandler(service), [authenticate]);
+   router.patch('/tasks/:id', updateTaskHandler(service), [authenticate, canWrite]);
+   router.post('/tasks/:id/status', changeStatusHandler(service), [authenticate, canWrite]);
++  router.patch('/tasks/:id/assignee', assignTaskHandler(service), [authenticate, canWrite]);
+   router.delete('/tasks/:id', deleteTaskHandler(service), [authenticate, canWrite]);
+ }
+diff --git a/src/server/tasks/service.ts b/src/server/tasks/service.ts
+index c020636..4800636 100644
+--- a/src/server/tasks/service.ts
++++ b/src/server/tasks/service.ts
+@@ -1,8 +1,15 @@
+ import { ForbiddenError, NotFoundError } from '../../shared/errors.ts';
+-import { validateStatus, validateTaskInput, validateTaskPatch } from '../../shared/validation.ts';
++import {
++  ValidationError,
++  validateAssigneeInput,
++  validateStatus,
++  validateTaskInput,
++  validateTaskPatch,
++} from '../../shared/validation.ts';
+ import type { AuthUser, Page, Task } from '../../shared/types.ts';
+ import type { TaskEventBus } from './events.ts';
+ import { parseTaskFilter, queryTasks } from './filters.ts';
++import type { UserRepository } from '../users/repository.ts';
+ import type { TaskRepository } from './repository.ts';
+ import { assertTransition } from './transitions.ts';
+ 
+@@ -16,11 +23,18 @@ export class TaskService {
+   private readonly repository: TaskRepository;
+   private readonly events: TaskEventBus;
+   private readonly now: () => Date;
++  private readonly users: UserRepository | undefined;
+ 
+-  constructor(repository: TaskRepository, events: TaskEventBus, now: () => Date = () => new Date()) {
++  constructor(
++    repository: TaskRepository,
++    events: TaskEventBus,
++    now: () => Date = () => new Date(),
++    users?: UserRepository,
++  ) {
+     this.repository = repository;
+     this.events = events;
+     this.now = now;
++    this.users = users;
+   }
+ 
+   create(actor: AuthUser, raw: unknown): Task {
+@@ -64,6 +78,22 @@ export class TaskService {
+     return task;
+   }
+ 
++  /** Sets or clears the assignee. The assignee must be an existing user who is not a viewer. */
++  assign(actor: AuthUser, id: string, raw: unknown): Task {
++    const before = this.getModifiable(actor, id, 'assign');
++    const assigneeId = validateAssigneeInput(raw);
++    if (assigneeId !== null) {
++      const assignee = this.users?.findById(assigneeId);
++      if (assignee === undefined) throw new NotFoundError('User', assigneeId);
++      if (assignee.role === 'viewer') {
++        throw new ValidationError([{ field: 'assigneeId', message: 'viewers cannot be assigned tasks' }]);
++      }
++    }
++    const task = this.repository.update(id, { assigneeId }, this.now());
++    this.events.publish({ type: 'task.updated', actorId: actor.id, task, before });
++    return task;
++  }
++
+   delete(actor: AuthUser, id: string): void {
+     const task = this.getModifiable(actor, id, 'delete');
+     this.repository.delete(id);
+diff --git a/src/shared/types.ts b/src/shared/types.ts
+index de417fb..36de361 100644
+--- a/src/shared/types.ts
++++ b/src/shared/types.ts
+@@ -27,6 +27,8 @@ export interface Task {
+   status: TaskStatus;
+   priority: TaskPriority;
+   ownerId: string;
++  /** User the task is assigned to, or null when nobody is. */
++  assigneeId: string | null;
+   /** ISO date (YYYY-MM-DD), or null when the task has no deadline. */
+   dueDate: string | null;
+   createdAt: string;
+diff --git a/src/shared/validation.ts b/src/shared/validation.ts
+index 690372e..6cfdc46 100644
+--- a/src/shared/validation.ts
++++ b/src/shared/validation.ts
+@@ -123,6 +123,16 @@ export function validateTaskPatch(raw: unknown): TaskPatch {
+   return patch;
+ }
+ 
++/** Validates the body of PATCH /tasks/:id/assignee: a user id, or null to clear the assignment. */
++export function validateAssigneeInput(raw: unknown): string | null {
++  const value = isRecord(raw) ? raw.assigneeId : undefined;
++  if (value === null) return null;
++  if (typeof value !== 'string' || value.length === 0) {
++    throw new ValidationError([{ field: 'assigneeId', message: 'must be a user id or null' }]);
++  }
++  return value;
++}
++
+ /** Validates the body of POST /tasks/:id/status. */
+ export function validateStatus(raw: unknown): TaskStatus {
+   const value = isRecord(raw) ? raw.status : raw;
+diff --git a/test/app.test.ts b/test/app.test.ts
+index f85dffb..4966043 100644
+--- a/test/app.test.ts
++++ b/test/app.test.ts
+@@ -103,6 +103,20 @@ describe('task endpoints', () => {
+     assert.equal(denied.status, 403);
+   });
+ 
++  it('assigns a task to another user and filters by assignee', async () => {
++    const { app } = createTestApp();
++    const admin = await signUp(app, 'admin@example.com');
++    const member = await signUp(app, 'member@example.com');
++    const created = await app.handle(authed(admin, 'POST', '/tasks', { title: 'Pair on this' }));
++    const id = (created.body as TaskBody).id;
++    const assigned = await app.handle(authed(admin, 'PATCH', `/tasks/${id}/assignee`, { assigneeId: member.userId }));
++    assert.equal(assigned.status, 200);
++    const mine = await app.handle(authed(member, 'GET', `/tasks?assignee=${member.userId}`));
++    assert.equal((mine.body as { items: TaskBody[] }).items.length, 1);
++    const ghost = await app.handle(authed(admin, 'PATCH', `/tasks/${id}/assignee`, { assigneeId: 'user_missing' }));
++    assert.equal(ghost.status, 404);
++  });
++
+   it('lists the first 20 tasks by default', async () => {
+     const { app } = createTestApp();
+     const admin = await signUp(app, 'admin@example.com');
+diff --git a/test/helpers/factories.ts b/test/helpers/factories.ts
+index 3fd2875..64d25b3 100644
+--- a/test/helpers/factories.ts
++++ b/test/helpers/factories.ts
+@@ -37,6 +37,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
+     status: 'todo',
+     priority: 'medium',
+     ownerId: 'user_member',
++    assigneeId: null,
+     dueDate: null,
+     createdAt: '2025-01-15T12:00:00.000Z',
+     updatedAt: '2025-01-15T12:00:00.000Z',

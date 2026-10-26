@@ -1,0 +1,11 @@
+{
+  "id": "add-task-labels",
+  "title": "Add labels to tasks (shared contract change)",
+  "category": "contract-update",
+  "prompt": "Add labels to tasks.\n\n1. `Task` gets `labels: string[]` (always present, `[]` when a task has none) and `TaskInput` gets an optional `labels?: string[]`.\n2. Validation, in both `validateTaskInput` and `validateTaskPatch`: `labels` must be an array of strings. Every label is trimmed and lower-cased; a label that is empty after trimming is rejected; each label may be at most 24 characters; duplicates (after normalization) are collapsed, keeping the order of first occurrence; at most 5 distinct labels are allowed. Every violation is reported as a ValidationError issue whose `field` is `labels`.\n3. `POST /tasks` and `PATCH /tasks/:id` accept `labels`, and every task in a response includes `labels`. A PATCH that omits `labels` keeps the stored labels; `[]` clears them.\n4. The CSV export gets a final `labels` column in which the labels of a task are joined with `|`.\n\nKeep the existing behavior and keep `npm test` green; update an existing test only where its expectation legitimately changes.",
+  "maxTurns": 45,
+  "timeoutMs": 1200000,
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": false }
+}

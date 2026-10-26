@@ -1,0 +1,12 @@
+{
+  "id": "decoy-search-tokenize",
+  "category": "decoy",
+  "prompt": "How does the search box on the task list turn the typed text into terms and match tasks against them? I want to change how the query is split.",
+  "required": [
+    { "ref": "src/web/utils/tokenize.ts#tokenize", "level": "source" },
+    { "ref": "src/web/utils/tokenize.ts#matchesAllTerms", "level": "source" },
+    { "ref": "src/web/hooks/useTasks.ts#useTasks", "level": "signature" }
+  ],
+  "forbidden": ["src/server/auth/token.ts", "src/legacy/auth/session-token.ts"],
+  "notes": "Reverse decoy: the question is about search-term tokenizing, and auth token modules match the keyword token."
+}

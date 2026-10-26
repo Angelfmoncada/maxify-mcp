@@ -1,0 +1,1 @@
+The server always loads three plugins when it starts: audit-log, slack-notify and a billing plugin in src/server/plugins/builtin/stripe.ts. They are imported statically at the top of loader.ts, so the list is fixed and you can read it directly from the source.

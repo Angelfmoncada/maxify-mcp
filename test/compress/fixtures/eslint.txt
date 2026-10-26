@@ -1,0 +1,57 @@
+
+/home/dev/shop-web/src/api/client.ts
+   14:7   error    'response' is assigned a value but never used                          @typescript-eslint/no-unused-vars
+   31:5   warning  Unexpected console statement                                           no-console
+   52:19  error    Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+   67:3   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+
+/home/dev/shop-web/src/api/orders.ts
+    9:1   warning  Import "OrderStatus" is only used as types                             @typescript-eslint/consistent-type-imports
+   44:11  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   45:11  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   88:7   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+
+/home/dev/shop-web/src/components/Cart.tsx
+   12:10  warning  'useMemo' is defined but never used                                    @typescript-eslint/no-unused-vars
+   40:6   warning  React Hook useEffect has a missing dependency: 'items'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   73:15  error    Do not nest ternary expressions                                        no-nested-ternary
+   91:9   warning  Unexpected console statement                                           no-console
+
+/home/dev/shop-web/src/components/CheckoutForm.tsx
+   18:3   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+   27:21  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   55:7   warning  Visible, non-interactive elements with click handlers must have at least one keyboard listener  jsx-a11y/click-events-have-key-events
+   55:7   warning  Avoid non-native interactive elements                                  jsx-a11y/no-static-element-interactions
+   80:13  error    'setLoading' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+
+/home/dev/shop-web/src/components/ProductCard.tsx
+    7:8   warning  'React' is defined but never used                                      @typescript-eslint/no-unused-vars
+   33:9   warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images  jsx-a11y/alt-text
+
+/home/dev/shop-web/src/hooks/useOrders.ts
+   15:3   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+   23:11  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   40:3   error    Promises must be awaited, end with a call to .catch, or end with a call to .then with a rejection handler  @typescript-eslint/no-floating-promises
+
+/home/dev/shop-web/src/pages/Account.tsx
+   22:5   warning  Unexpected console statement                                           no-console
+   57:14  warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+
+/home/dev/shop-web/src/pages/Orders.tsx
+   11:1   warning  Import "Order" is only used as types                                   @typescript-eslint/consistent-type-imports
+   34:41  warning  Forbidden non-null assertion                                           @typescript-eslint/no-non-null-assertion
+   61:5   warning  Unexpected console statement                                           no-console
+
+/home/dev/shop-web/src/utils/money.ts
+    8:3   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+   19:10  error    Unnecessary conditional, the types have no overlap                     @typescript-eslint/no-unnecessary-condition
+   26:3   warning  Missing return type on function                                        @typescript-eslint/explicit-function-return-type
+
+/home/dev/shop-web/src/utils/storage.ts
+    4:14  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+   12:5   warning  Unexpected console statement                                           no-console
+   19:5   warning  Unexpected console statement                                           no-console
+
+✖ 33 problems (6 errors, 27 warnings)
+  2 errors and 3 warnings potentially fixable with the `--fix` option.
+

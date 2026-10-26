@@ -1,0 +1,18 @@
+diff --git a/src/server/auth/token.ts b/src/server/auth/token.ts
+index 40ee9bb..fac74e6 100644
+--- a/src/server/auth/token.ts
++++ b/src/server/auth/token.ts
+@@ -70,11 +70,11 @@ export function decodeToken(token: string): TokenPayload {
+ }
+ 
+ /**
+- * Whether the token has passed its `exp` time.
++ * A token is expired from its `exp` second onwards: at `exp` exactly it is already invalid.
+  * `nowMs` is a millisecond timestamp, `exp` is in seconds.
+  */
+ export function isExpired(payload: Pick<TokenPayload, 'exp'>, nowMs: number = Date.now()): boolean {
+-  return Math.floor(nowMs / 1000) > payload.exp;
++  return Math.floor(nowMs / 1000) >= payload.exp;
+ }
+ 
+ /** Verifies signature and expiry and returns the payload. Throws UnauthorizedError otherwise. */

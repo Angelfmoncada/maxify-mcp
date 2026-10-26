@@ -1,0 +1,14 @@
+{
+  "id": "ts-transition-tests",
+  "category": "test-search",
+  "prompt": "Where are the tests for the task status transition rules, and which implementation file do they exercise?",
+  "required": [
+    { "ref": "test/transitions.test.ts", "level": "map" },
+    { "ref": "test/transitions.test.ts#canTransition > only lets a finished task be reopened into in_progress", "level": "source" },
+    { "ref": "src/server/tasks/transitions.ts#TRANSITIONS", "level": "source" },
+    { "ref": "src/server/tasks/transitions.ts#canTransition", "level": "signature" },
+    { "ref": "test/task-service.test.ts#TaskService.updateStatus", "level": "map" }
+  ],
+  "forbidden": ["src/web/components/StatusBadge.tsx"],
+  "notes": "StatusBadge matches the word status but is presentation only. Service-level tests also exercise the transition table indirectly."
+}

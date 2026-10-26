@@ -1,0 +1,28 @@
+diff --git a/src/cart/__tests__/cart.test.js b/src/cart/__tests__/cart.test.js
+index 41c2d9e..0f8a7b1 100644
+--- a/src/cart/__tests__/cart.test.js
++++ b/src/cart/__tests__/cart.test.js
+@@ -47,8 +47,16 @@ describe('Cart', () => {
+   test('computes total with discount', () => {
+     const cart = new Cart(memoryStorage());
+     cart.add({ id: 'sku-1', qty: 2, price: 50 });
+     cart.applyDiscount({ code: 'TEN', percent: 10 });
+ 
+     expect(cart.total()).toBe(90);
+   });
++
++  test('ignores a discount code applied twice', () => {
++    const cart = new Cart(memoryStorage());
++    cart.add({ id: 'sku-1', qty: 1, price: 100 });
++    expect(cart.applyDiscount({ code: 'TEN', percent: 10 })).toBe(true);
++    expect(cart.applyDiscount({ code: 'TEN', percent: 10 })).toBe(false);
++    expect(cart.total()).toBe(90);
++  });
+ });
+diff --git a/dist/bundle.min.js b/dist/bundle.min.js
+index 9d8e7f6..1a2b3c4 100644
+--- a/dist/bundle.min.js
++++ b/dist/bundle.min.js
+@@ -1 +1 @@
+-!function(){"use strict";var e={cart:{items:[],discounts:[]},remove:function(t){this.items=this.items.filter(function(n){return n.id===t})},total:function(){return this.items.reduce(function(t,n){return t+n.price*n.qty},0)}};window.__shop=e}();
++!function(){"use strict";var e={cart:{items:[],discounts:[],percentOff:0},remove:function(t){this.items=this.items.filter(function(n){return n.id!==t})},total:function(){var t=this.items.reduce(function(t,n){return t+n.price*n.qty},0);return Math.round(t*(1-this.percentOff/100)*100)/100}};window.__shop=e}();

@@ -1,0 +1,56 @@
+diff --git a/src/cart/cart.js b/src/cart/cart.js
+index 3b18e51..a9c2f04 100644
+--- a/src/cart/cart.js
++++ b/src/cart/cart.js
+@@ -1,6 +1,7 @@
+ import { formatPrice } from '../utils/format';
++import { roundMoney } from '../utils/money';
+ 
+ const STORAGE_KEY = 'shop.cart.v2';
+ 
+ export class Cart {
+   constructor(storage = window.localStorage) {
+@@ -38,12 +39,17 @@ export class Cart {
+   }
+ 
+   remove(id) {
+-    this.items = this.items.filter((item) => item.id === id);
++    this.items = this.items.filter((item) => item.id !== id);
+     this.persist();
+   }
+ 
+   applyDiscount(discount) {
+-    this.discounts.push(discount.code);
++    if (this.discounts.includes(discount.code)) {
++      return false;
++    }
++    this.discounts.push(discount.code);
++    this.percentOff = Math.min(100, this.percentOff + discount.percent);
++    return true;
+   }
+ 
+   total() {
+@@ -51,7 +57,7 @@ export class Cart {
+       (sum, item) => sum + item.price * item.qty,
+       0,
+     );
+-    return subtotal;
++    return roundMoney(subtotal * (1 - this.percentOff / 100));
+   }
+ 
+   persist() {
+diff --git a/src/utils/money.js b/src/utils/money.js
+new file mode 100644
+index 0000000..5d1c3e7
+--- /dev/null
++++ b/src/utils/money.js
+@@ -0,0 +1,9 @@
++/**
++ * Rounds a monetary amount to cents using banker's rounding.
++ */
++export function roundMoney(amount) {
++  const cents = amount * 100;
++  const floor = Math.floor(cents);
++  const diff = cents - floor;
++  return (diff === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(cents)) / 100;
++}

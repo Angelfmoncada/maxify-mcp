@@ -1,0 +1,39 @@
+src/api/client.ts(14,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/api/client.ts(52,19): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/api/orders.ts(31,24): error TS2339: Property 'shippedAt' does not exist on type 'Order'.
+src/api/orders.ts(77,5): error TS2741: Property 'currency' is missing in type '{ amount: number; }' but required in type 'Money'.
+src/components/Cart.tsx(88,5): error TS2741: Property 'onRemove' is missing in type '{ items: CartItem[]; }' but required in type 'CartListProps'.
+src/components/Cart.tsx(102,17): error TS2322: Type '(item: CartItem) => void' is not assignable to type '(id: string) => void'.
+  Types of parameters 'item' and 'id' are incompatible.
+    Type 'string' is not assignable to type 'CartItem'.
+src/components/CheckoutForm.tsx(45,9): error TS2554: Expected 2 arguments, but got 1.
+src/components/CheckoutForm.tsx(61,30): error TS18048: 'address.postalCode' is possibly 'undefined'.
+src/components/ProductCard.tsx(19,22): error TS2551: Property 'imageUrl' does not exist on type 'Product'. Did you mean 'imageURL'?
+src/hooks/useOrders.ts(23,11): error TS7006: Parameter 'order' implicitly has an 'any' type.
+src/hooks/useOrders.ts(40,3): error TS2322: Type 'Promise<Order[] | undefined>' is not assignable to type 'Promise<Order[]>'.
+  Type 'Order[] | undefined' is not assignable to type 'Order[]'.
+    Type 'undefined' is not assignable to type 'Order[]'.
+src/pages/Account.tsx(12,10): error TS2305: Module '"@/hooks/useAuth"' has no exported member 'useSession'.
+src/pages/Account.tsx(57,14): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: LinkProps): Link', gave the following error.
+    Type '{ children: string; href: string; replace: true; scroll: string; }' is not assignable to type 'IntrinsicAttributes & LinkProps'.
+      Property 'scroll' is incompatible with index signature.
+  Overload 2 of 2, '(props: LinkProps, context: any): Link', gave the following error.
+    Type 'string' is not assignable to type 'boolean | undefined'.
+src/pages/Orders.tsx(34,41): error TS2532: Object is possibly 'undefined'.
+src/utils/money.ts(8,3): error TS2365: Operator '+' cannot be applied to types 'Money' and 'number'.
+src/utils/money.ts(19,10): error TS2367: This comparison appears to be unintentional because the types '"EUR"' and '"eur"' have no overlap.
+
+Found 17 errors in 9 files.
+
+Errors  Files
+     2  src/api/client.ts:14
+     2  src/api/orders.ts:31
+     2  src/components/Cart.tsx:88
+     2  src/components/CheckoutForm.tsx:45
+     1  src/components/ProductCard.tsx:19
+     2  src/hooks/useOrders.ts:23
+     2  src/pages/Account.tsx:12
+     1  src/pages/Orders.tsx:34
+     2  src/utils/money.ts:8

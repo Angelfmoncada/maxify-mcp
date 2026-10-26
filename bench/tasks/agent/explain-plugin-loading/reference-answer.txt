@@ -1,0 +1,5 @@
+At startup src/server/index.ts calls startPlugins(app) from src/server/app.ts, which passes app.config.plugins to loadPlugins in src/server/plugins/loader.ts.
+
+The names come from the PLUGINS environment variable: loadConfig in src/server/config.ts splits it on commas and defaults to ["audit-log"].
+
+loadPlugin then runs a dynamic import of `./builtin/${name}.ts`. The path is assembled at runtime from the configured name, so the source alone does not tell you which file is imported: it depends on the value of PLUGINS. What I can say is that the folder src/server/plugins/builtin contains audit-log.ts and slack-notify.ts, and that with the default configuration only audit-log is loaded. I cannot determine from the code what PLUGINS is set to in a given deployment.

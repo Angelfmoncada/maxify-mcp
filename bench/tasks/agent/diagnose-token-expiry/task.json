@@ -1,0 +1,12 @@
+{
+  "id": "diagnose-token-expiry",
+  "title": "Token accepted during its expiry second",
+  "category": "diagnosis",
+  "prompt": "Security report: an API token is still accepted during the exact second in which it expires, and is only rejected one second later. Find the root cause in the server code and fix it. Do not change any test files.",
+  "maxTurns": 30,
+  "timeoutMs": 900000,
+  "setupPatch": "setup.patch",
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": false }
+}

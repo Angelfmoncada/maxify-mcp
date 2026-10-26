@@ -1,0 +1,14 @@
+{
+  "id": "diag-403-delete",
+  "category": "diagnosis",
+  "prompt": "A viewer calling DELETE /tasks/:id gets 403 \"Requires one of the roles: admin, member\", while a member deleting somebody else's task gets 403 \"Only the owner or an admin can delete this task\". Where do these two 403 responses come from?",
+  "required": [
+    { "ref": "src/server/auth/middleware.ts#requireRole", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#TaskService.getModifiable", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#canModify", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#registerTaskRoutes", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#TaskService.delete", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "notes": "The second message is assembled from a template (`Only the owner or an admin can ${action} this task`), so a literal grep for the full sentence finds nothing."
+}

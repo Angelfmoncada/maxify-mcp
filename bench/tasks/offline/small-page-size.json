@@ -1,0 +1,11 @@
+{
+  "id": "small-page-size",
+  "category": "small",
+  "prompt": "Change the default page size for task listings from 20 to 25.",
+  "required": [
+    { "ref": "src/shared/constants.ts#DEFAULT_PAGE_SIZE", "level": "source" },
+    { "ref": "test/app.test.ts#task endpoints > lists the first 20 tasks by default", "level": "source" }
+  ],
+  "forbidden": [],
+  "notes": "Overhead case: a one-line constant plus one literal in a test. Maxify's map and headers may cost more than a targeted grep."
+}

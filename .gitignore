@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+bench/.tmp/
+bench/results/*
+!bench/results/.gitkeep
+*.log
+.DS_Store
+__pycache__/

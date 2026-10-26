@@ -1,0 +1,16 @@
+{
+  "exclude": [],
+  "respectGitignore": true,
+  "maxFileBytes": 1000000,
+  "extraSecretPatterns": [],
+  "context": {
+    "defaultBudget": 4000,
+    "includeTests": true,
+    "delta": false
+  },
+  "compress": {
+    "blobTtlDays": 7,
+    "maxStoreMB": 200,
+    "defaultMaxTokens": 1200
+  }
+}

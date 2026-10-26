@@ -1,0 +1,11 @@
+{
+  "id": "assign-task",
+  "title": "Task assignment across shared, service, routes and app wiring",
+  "category": "multi-module",
+  "prompt": "Implement task assignment.\n\n1. `Task` gets `assigneeId: string | null` (`null` for new tasks).\n2. New endpoint `PATCH /tasks/:id/assignee` with body `{ \"assigneeId\": \"<user id>\" | null }`. It needs authentication like the other task routes, and only the task owner or an admin may use it: everybody else, viewers included, gets 403 under the same rules as the other task modifications.\n3. A non-null `assigneeId` must be the id of an existing user (otherwise respond 404) whose role is not `viewer` (otherwise respond 400 with a ValidationError issue on the field `assigneeId`). `null` clears the assignment. A missing body, or an `assigneeId` that is neither a non-empty string nor null, is a 400 with the field `assigneeId`.\n4. The endpoint responds 200 with the updated task and publishes a `task.updated` event on the app's event bus, like the other updates.\n5. `GET /tasks?assignee=<user id>` returns only the tasks assigned to that user.\n\nKeep the existing behavior and keep `npm test` green.",
+  "maxTurns": 50,
+  "timeoutMs": 1500000,
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": false }
+}

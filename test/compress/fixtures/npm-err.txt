@@ -1,0 +1,83 @@
+npm WARN deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm WARN deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm WARN deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm WARN deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+npm WARN deprecated @humanwhocodes/config-array@0.11.14: Use @eslint/config-array instead
+npm WARN deprecated sourcemap-codec@1.4.8: Please use @jridgewell/sourcemap-codec instead
+npm WARN deprecated rollup-plugin-terser@7.0.2: This package has been deprecated and is no longer maintained. Please use @rollup/plugin-terser
+npm WARN deprecated stable@0.1.8: Modern JS already guarantees Array#sort() is a stable sort, so this library is deprecated. See the compatibility table on MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#browser_compatibility
+npm WARN deprecated workbox-cacheable-response@6.6.0: workbox-background-sync@6.6.0
+npm WARN deprecated workbox-google-analytics@6.6.0: It is not compatible with newer versions of GA starting with v4, as long as you are using GAv3 it should be ok, but the package is not longer being maintained
+npm WARN deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+npm WARN deprecated domexception@4.0.0: Use your platform's native DOMException instead
+npm WARN deprecated w3c-hr-time@1.0.2: Use your platform's native performance.now() and performance.timeOrigin.
+npm WARN deprecated q@1.5.1: You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+npm WARN deprecated svgo@1.3.2: This SVGO version is no longer supported. Upgrade to v2.x.x.
+npm WARN deprecated @babel/plugin-proposal-private-methods@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-private-methods instead.
+npm WARN deprecated @babel/plugin-proposal-numeric-separator@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-numeric-separator instead.
+npm WARN deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
+npm WARN deprecated @babel/plugin-proposal-nullish-coalescing-operator@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-nullish-coalescing-operator instead.
+npm WARN deprecated @babel/plugin-proposal-optional-chaining@7.21.0: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-optional-chaining instead.
+npm WARN deprecated @babel/plugin-proposal-private-property-in-object@7.21.11: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-private-property-in-object instead.
+npm WARN deprecated eslint@8.57.0: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+npm WARN deprecated core-js@2.6.12: core-js@<3.23.3 is no longer maintained and not recommended for usage due to the number of issues. Because of the V8 engine whims, feature detection in old core-js versions could cause a slowdown up to 100x even if nothing is polyfilled. Some versions have web compatibility issues. Please, upgrade your dependencies to the actual version of core-js.
+npm WARN deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+npm WARN deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
+npm WARN deprecated har-validator@5.1.5: this library is no longer supported
+npm WARN deprecated querystring@0.2.0: The querystring API is considered Legacy. new code should use the URLSearchParams API instead.
+npm WARN deprecated node-sass@7.0.3: Node Sass is no longer supported. Please use `sass` or `sass-embedded` instead.
+npm ERR! code 1
+npm ERR! path /home/dev/shop-web/node_modules/node-sass
+npm ERR! command failed
+npm ERR! command sh -c node scripts/build.js
+npm ERR! Building: /usr/bin/node /home/dev/shop-web/node_modules/node-gyp/bin/node-gyp.js rebuild --verbose --libsass_ext= --libsass_cflags= --libsass_ldflags= --libsass_library=
+npm ERR! gyp info it worked if it ends with ok
+npm ERR! gyp verb cli [
+npm ERR! gyp verb cli   '/usr/bin/node',
+npm ERR! gyp verb cli   '/home/dev/shop-web/node_modules/node-gyp/bin/node-gyp.js',
+npm ERR! gyp verb cli   'rebuild',
+npm ERR! gyp verb cli   '--verbose',
+npm ERR! gyp verb cli   '--libsass_ext=',
+npm ERR! gyp verb cli   '--libsass_cflags=',
+npm ERR! gyp verb cli   '--libsass_ldflags=',
+npm ERR! gyp verb cli   '--libsass_library='
+npm ERR! gyp verb cli ]
+npm ERR! gyp info using node-gyp@8.4.1
+npm ERR! gyp info using node@22.1.0 | linux | x64
+npm ERR! gyp verb command rebuild []
+npm ERR! gyp verb command clean []
+npm ERR! gyp verb clean removing "build" directory
+npm ERR! gyp verb command configure []
+npm ERR! gyp verb find Python Python is not set from command line or npm configuration
+npm ERR! gyp verb find Python checking if "python3" can be used
+npm ERR! gyp verb find Python - "python3" is in PATH at "/usr/bin/python3"
+npm ERR! gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+npm ERR! gyp verb get node dir no --target version specified, falling back to host node version: 22.1.0
+npm ERR! gyp info spawn /usr/bin/python3
+npm ERR! gyp info spawn args [
+npm ERR! gyp info spawn args   '/home/dev/shop-web/node_modules/node-gyp/gyp/gyp_main.py',
+npm ERR! gyp info spawn args   'binding.gyp',
+npm ERR! gyp info spawn args   '-f',
+npm ERR! gyp info spawn args   'make',
+npm ERR! gyp info spawn args ]
+npm ERR! Traceback (most recent call last):
+npm ERR!   File "/home/dev/shop-web/node_modules/node-gyp/gyp/gyp_main.py", line 50, in <module>
+npm ERR!     sys.exit(gyp.script_main())
+npm ERR!   File "/home/dev/shop-web/node_modules/node-gyp/gyp/pylib/gyp/__init__.py", line 554, in script_main
+npm ERR!     return main(sys.argv[1:])
+npm ERR!   File "/home/dev/shop-web/node_modules/node-gyp/gyp/pylib/gyp/input.py", line 1037, in IsStrCanonicalInt
+npm ERR! ModuleNotFoundError: No module named 'distutils'
+npm ERR! gyp ERR! configure error
+npm ERR! gyp ERR! stack Error: `gyp` failed with exit code: 1
+npm ERR! gyp ERR! stack     at ChildProcess.onCpExit (/home/dev/shop-web/node_modules/node-gyp/lib/configure.js:259:16)
+npm ERR! gyp ERR! stack     at ChildProcess.emit (node:events:519:28)
+npm ERR! gyp ERR! stack     at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+npm ERR! gyp ERR! System Linux 6.8.0-31-generic
+npm ERR! gyp ERR! command "/usr/bin/node" "/home/dev/shop-web/node_modules/node-gyp/bin/node-gyp.js" "rebuild" "--verbose" "--libsass_ext=" "--libsass_cflags=" "--libsass_ldflags=" "--libsass_library="
+npm ERR! gyp ERR! cwd /home/dev/shop-web/node_modules/node-sass
+npm ERR! gyp ERR! node -v v22.1.0
+npm ERR! gyp ERR! node-gyp -v v8.4.1
+npm ERR! gyp ERR! not ok
+npm ERR! Build failed with error code: 1
+
+npm ERR! A complete log of this run can be found in: /home/dev/.npm/_logs/2024-05-02T10_31_07_551Z-debug-0.log

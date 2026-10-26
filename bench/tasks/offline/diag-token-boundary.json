@@ -1,0 +1,14 @@
+{
+  "id": "diag-token-boundary",
+  "category": "diagnosis",
+  "prompt": "Security report: an API token is still accepted during the exact second in which it expires and is only rejected one second later. Find where the server decides that a token has expired and tell me what to change.",
+  "required": [
+    { "ref": "src/server/auth/token.ts#isExpired", "level": "source" },
+    { "ref": "src/server/auth/token.ts:77-77", "level": "source", "anchor": ">= payload.exp" },
+    { "ref": "src/server/auth/token.ts#verifyToken", "level": "source" },
+    { "ref": "src/server/auth/middleware.ts#requireAuth", "level": "signature" },
+    { "ref": "test/token.test.ts", "level": "map" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts", "src/web/utils/tokenize.ts"],
+  "notes": "Expiry is decided by isExpired, enforced in verifyToken and reached through requireAuth. The legacy folder has its own isTokenExpired with the opposite boundary: a tempting but unused decoy."
+}

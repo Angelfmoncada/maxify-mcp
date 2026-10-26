@@ -1,0 +1,205 @@
+diff --git a/src/server/tasks/export.ts b/src/server/tasks/export.ts
+index 102c981..9f4108c 100644
+--- a/src/server/tasks/export.ts
++++ b/src/server/tasks/export.ts
+@@ -15,10 +15,17 @@ export const TASK_CSV_COLUMNS = [
+   'ownerId',
+   'dueDate',
+   'createdAt',
++  'labels',
+ ] as const;
+ 
++function cellValue(task: Task, column: (typeof TASK_CSV_COLUMNS)[number]): string {
++  // Labels are joined with '|' so they fit one cell without clashing with the comma delimiter.
++  if (column === 'labels') return task.labels.join('|');
++  return String(task[column] ?? '');
++}
++
+ /** Serializes tasks as CSV with a header row; column order is TASK_CSV_COLUMNS. */
+ export function tasksToCsv(tasks: readonly Task[]): string {
+-  const rows = tasks.map((task) => TASK_CSV_COLUMNS.map((column) => String(task[column] ?? '')));
++  const rows = tasks.map((task) => TASK_CSV_COLUMNS.map((column) => cellValue(task, column)));
+   return toCsv([[...TASK_CSV_COLUMNS], ...rows]);
+ }
+diff --git a/src/server/tasks/repository.ts b/src/server/tasks/repository.ts
+index afd1cff..863f567 100644
+--- a/src/server/tasks/repository.ts
++++ b/src/server/tasks/repository.ts
+@@ -3,7 +3,7 @@ import { createId } from '../../shared/utils.ts';
+ import type { Task, TaskInput } from '../../shared/types.ts';
+ 
+ /** Fields that may change after creation. Identity, owner and timestamps are managed by the repository. */
+-export type TaskChanges = Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'dueDate'>>;
++export type TaskChanges = Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'dueDate' | 'labels'>>;
+ 
+ /** In-memory task store. Stored tasks are never mutated; updates replace them with a new object. */
+ export class TaskRepository {
+@@ -19,6 +19,7 @@ export class TaskRepository {
+       priority: input.priority ?? 'medium',
+       ownerId,
+       dueDate: input.dueDate ?? null,
++      labels: input.labels ?? [],
+       createdAt: timestamp,
+       updatedAt: timestamp,
+     };
+diff --git a/src/shared/constants.ts b/src/shared/constants.ts
+index c861706..922054a 100644
+--- a/src/shared/constants.ts
++++ b/src/shared/constants.ts
+@@ -7,6 +7,8 @@ export const TASK_PRIORITIES: readonly TaskPriority[] = ['low', 'medium', 'high'
+ export const MAX_TITLE_LENGTH = 120;
+ export const MAX_DESCRIPTION_LENGTH = 2000;
+ export const MIN_PASSWORD_LENGTH = 8;
++export const MAX_LABELS = 5;
++export const MAX_LABEL_LENGTH = 24;
+ 
+ /** Number of tasks returned per page when the client does not ask for a size. */
+ export const DEFAULT_PAGE_SIZE = 20;
+diff --git a/src/shared/types.ts b/src/shared/types.ts
+index de417fb..007906e 100644
+--- a/src/shared/types.ts
++++ b/src/shared/types.ts
+@@ -29,6 +29,8 @@ export interface Task {
+   ownerId: string;
+   /** ISO date (YYYY-MM-DD), or null when the task has no deadline. */
+   dueDate: string | null;
++  /** Normalized (trimmed, lower-case, distinct) labels; empty when the task has none. */
++  labels: string[];
+   createdAt: string;
+   updatedAt: string;
+ }
+@@ -39,6 +41,7 @@ export interface TaskInput {
+   description?: string;
+   priority?: TaskPriority;
+   dueDate?: string | null;
++  labels?: string[];
+ }
+ 
+ /** Fields a client may change on an existing task; the status has its own endpoint. */
+diff --git a/src/shared/validation.ts b/src/shared/validation.ts
+index 690372e..77b661b 100644
+--- a/src/shared/validation.ts
++++ b/src/shared/validation.ts
+@@ -1,5 +1,7 @@
+ import {
+   MAX_DESCRIPTION_LENGTH,
++  MAX_LABEL_LENGTH,
++  MAX_LABELS,
+   MAX_TITLE_LENGTH,
+   MIN_PASSWORD_LENGTH,
+   ROLES,
+@@ -85,6 +87,32 @@ function readDueDate(value: unknown, issues: ValidationIssue[]): string | null |
+   return value;
+ }
+ 
++function readLabels(value: unknown, issues: ValidationIssue[]): string[] | undefined {
++  if (value === undefined) return undefined;
++  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
++    issues.push({ field: 'labels', message: 'must be an array of strings' });
++    return undefined;
++  }
++  const labels: string[] = [];
++  for (const item of value as string[]) {
++    const label = item.trim().toLowerCase();
++    if (label.length === 0) {
++      issues.push({ field: 'labels', message: 'must not contain empty labels' });
++      return undefined;
++    }
++    if (label.length > MAX_LABEL_LENGTH) {
++      issues.push({ field: 'labels', message: `each label must be at most ${MAX_LABEL_LENGTH} characters` });
++      return undefined;
++    }
++    if (!labels.includes(label)) labels.push(label);
++  }
++  if (labels.length > MAX_LABELS) {
++    issues.push({ field: 'labels', message: `must contain at most ${MAX_LABELS} distinct labels` });
++    return undefined;
++  }
++  return labels;
++}
++
+ /** Validates the body of POST /tasks. Throws a ValidationError that lists every problem found. */
+ export function validateTaskInput(raw: unknown): TaskInput {
+   if (!isRecord(raw)) throw new ValidationError([{ field: 'body', message: 'must be a JSON object' }]);
+@@ -93,12 +121,14 @@ export function validateTaskInput(raw: unknown): TaskInput {
+   const description = readDescription(raw.description, issues);
+   const priority = readPriority(raw.priority, issues);
+   const dueDate = readDueDate(raw.dueDate, issues);
++  const labels = readLabels(raw.labels, issues);
+   if (issues.length > 0 || title === undefined) throw new ValidationError(issues);
+   return {
+     title,
+     ...(description !== undefined ? { description } : {}),
+     ...(priority !== undefined ? { priority } : {}),
+     ...(dueDate !== undefined ? { dueDate } : {}),
++    ...(labels !== undefined ? { labels } : {}),
+   };
+ }
+ 
+@@ -110,11 +140,13 @@ export function validateTaskPatch(raw: unknown): TaskPatch {
+   const description = readDescription(raw.description, issues);
+   const priority = readPriority(raw.priority, issues);
+   const dueDate = readDueDate(raw.dueDate, issues);
++  const labels = readLabels(raw.labels, issues);
+   const patch: TaskPatch = {
+     ...(title !== undefined ? { title } : {}),
+     ...(description !== undefined ? { description } : {}),
+     ...(priority !== undefined ? { priority } : {}),
+     ...(dueDate !== undefined ? { dueDate } : {}),
++    ...(labels !== undefined ? { labels } : {}),
+   };
+   if (issues.length === 0 && Object.keys(patch).length === 0) {
+     issues.push({ field: 'body', message: 'must contain at least one field to change' });
+diff --git a/test/app.test.ts b/test/app.test.ts
+index f85dffb..72d3bc0 100644
+--- a/test/app.test.ts
++++ b/test/app.test.ts
+@@ -124,7 +124,7 @@ describe('task endpoints', () => {
+     assert.equal(response.status, 200);
+     assert.equal(response.headers['content-type'], 'text/csv; charset=utf-8');
+     const lines = String(response.body).trim().split('\r\n');
+-    assert.equal(lines[0], 'id,title,status,priority,ownerId,dueDate,createdAt');
++    assert.equal(lines[0], 'id,title,status,priority,ownerId,dueDate,createdAt,labels');
+     assert.match(lines[1] ?? '', /"Plan, then build",todo,medium,/);
+   });
+ });
+diff --git a/test/helpers/factories.ts b/test/helpers/factories.ts
+index 3fd2875..74f3699 100644
+--- a/test/helpers/factories.ts
++++ b/test/helpers/factories.ts
+@@ -38,6 +38,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
+     priority: 'medium',
+     ownerId: 'user_member',
+     dueDate: null,
++    labels: [],
+     createdAt: '2025-01-15T12:00:00.000Z',
+     updatedAt: '2025-01-15T12:00:00.000Z',
+     ...overrides,
+diff --git a/test/validation.test.ts b/test/validation.test.ts
+index 7d8ac0f..a0785b3 100644
+--- a/test/validation.test.ts
++++ b/test/validation.test.ts
+@@ -58,6 +58,23 @@ describe('validateTaskInput', () => {
+   });
+ });
+ 
++describe('labels', () => {
++  it('normalizes, de-duplicates and keeps the first occurrence order', () => {
++    assert.deepEqual(validateTaskInput({ title: 'Plan', labels: [' Bug ', 'bug', 'Urgent'] }).labels, ['bug', 'urgent']);
++  });
++
++  it('rejects non-arrays, empty labels, long labels and more than five distinct labels', () => {
++    assert.equal(issuesOf(() => validateTaskInput({ title: 'Plan', labels: 'bug' }))[0]?.field, 'labels');
++    assert.equal(issuesOf(() => validateTaskInput({ title: 'Plan', labels: ['ok', '  '] }))[0]?.field, 'labels');
++    assert.equal(issuesOf(() => validateTaskInput({ title: 'Plan', labels: ['x'.repeat(25)] }))[0]?.field, 'labels');
++    assert.equal(issuesOf(() => validateTaskInput({ title: 'Plan', labels: ['a', 'b', 'c', 'd', 'e', 'f'] }))[0]?.field, 'labels');
++  });
++
++  it('is accepted by patches too', () => {
++    assert.deepEqual(validateTaskPatch({ labels: ['A'] }), { labels: ['a'] });
++  });
++});
++
+ describe('validateTaskPatch', () => {
+   it('accepts a single changed field', () => {
+     assert.deepEqual(validateTaskPatch({ priority: 'urgent' }), { priority: 'urgent' });

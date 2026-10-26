@@ -1,0 +1,14 @@
+diff --git a/src/server/tasks/service.ts b/src/server/tasks/service.ts
+index 279b4f7..c020636 100644
+--- a/src/server/tasks/service.ts
++++ b/src/server/tasks/service.ts
+@@ -58,8 +58,7 @@ export class TaskService {
+   updateStatus(actor: AuthUser, id: string, rawStatus: unknown): Task {
+     const before = this.getModifiable(actor, id, 'change the status of');
+     const status = validateStatus(rawStatus);
+-    // Admins may correct a mis-filed card, so the board rules only bind other roles.
+-    if (actor.role !== 'admin') assertTransition(before.status, status);
++    assertTransition(before.status, status);
+     const task = this.repository.update(id, { status }, this.now());
+     this.events.publish({ type: 'task.status_changed', actorId: actor.id, task, from: before.status });
+     return task;

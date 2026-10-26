@@ -1,0 +1,16 @@
+{
+  "id": "cu-role-rename",
+  "category": "contract-update",
+  "prompt": "Rename the member role to editor everywhere: the shared Role type and ROLES constant, the permission checks on the server and the client-side permission helpers.",
+  "required": [
+    { "ref": "src/shared/types.ts#Role", "level": "source" },
+    { "ref": "src/shared/constants.ts#ROLES", "level": "source" },
+    { "ref": "src/server/tasks/service.ts#canModify", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#registerTaskRoutes", "level": "source" },
+    { "ref": "src/server/auth/service.ts#AuthService.register", "level": "source" },
+    { "ref": "src/web/hooks/useAuth.tsx#AuthProvider", "level": "source" },
+    { "ref": "src/web/App.tsx#Board", "level": "source" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "notes": "Role values are spread over the shared contract, a server rule, route middleware, account creation and two client files."
+}

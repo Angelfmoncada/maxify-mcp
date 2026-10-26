@@ -1,0 +1,16 @@
+{
+  "id": "pe-new-helper",
+  "category": "post-edit",
+  "prompt": "Where is the helper that tells whether a token will expire within the next few minutes, and what does it use to decide?",
+  "required": [
+    { "ref": "src/server/auth/token.ts#isAboutToExpire", "level": "source" },
+    { "ref": "src/server/auth/token.ts#isExpired", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts"],
+  "edit": {
+    "file": "src/server/auth/token.ts",
+    "find": "/** Verifies signature and expiry and returns the payload. Throws UnauthorizedError otherwise. */",
+    "replace": "/** True when the token is still valid but expires within `windowSeconds`. */\nexport function isAboutToExpire(\n  payload: Pick<TokenPayload, 'exp'>,\n  windowSeconds: number = 300,\n  nowMs: number = Date.now(),\n): boolean {\n  const remaining = payload.exp - Math.floor(nowMs / 1000);\n  return remaining > 0 && remaining <= windowSeconds;\n}\n\n/** Verifies signature and expiry and returns the payload. Throws UnauthorizedError otherwise. */"
+  },
+  "notes": "Freshness check: a function added after the initial index must be found by its new name once the file is re-indexed."
+}

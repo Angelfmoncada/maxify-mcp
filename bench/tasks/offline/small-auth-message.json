@@ -1,0 +1,10 @@
+{
+  "id": "small-auth-message",
+  "category": "small",
+  "prompt": "Change the 401 message returned when the Authorization header is missing from \"Authorization header is missing\" to \"Missing or malformed Authorization header\".",
+  "required": [
+    { "ref": "src/server/auth/middleware.ts#requireAuth", "level": "source" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "notes": "Overhead case: the exact string is quoted in the prompt, so a single grep locates it."
+}

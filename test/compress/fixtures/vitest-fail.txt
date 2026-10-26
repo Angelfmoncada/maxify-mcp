@@ -1,0 +1,124 @@
+
+ RUN  v2.1.8 /home/dev/shop-api
+
+ ✓ src/utils/money.test.ts > formatMoney > formats EUR with two decimals 1ms
+ ✓ src/utils/money.test.ts > formatMoney > formats JPY without decimals 0ms
+ ✓ src/utils/money.test.ts > formatMoney > uses non-breaking space before the symbol 0ms
+ ✓ src/utils/money.test.ts > formatMoney > rounds half to even 0ms
+ ✓ src/utils/money.test.ts > addMoney > adds amounts with the same currency 0ms
+ ✓ src/utils/money.test.ts > addMoney > throws on currency mismatch 1ms
+ ✓ src/utils/money.test.ts > allocate > splits 100 into 3 parts without losing cents 0ms
+ ✓ src/utils/money.test.ts > allocate > keeps ratios for weighted splits 0ms
+ ✓ src/utils/dates.test.ts > parseIsoDate > parses dates without time 1ms
+ ✓ src/utils/dates.test.ts > parseIsoDate > parses UTC timestamps 0ms
+ ✓ src/utils/dates.test.ts > parseIsoDate > rejects invalid months 0ms
+ ✓ src/utils/dates.test.ts > businessDaysBetween > skips weekends 0ms
+ ✓ src/utils/dates.test.ts > businessDaysBetween > skips configured holidays 1ms
+ ✓ src/utils/dates.test.ts > businessDaysBetween > returns 0 for the same day 0ms
+ ✓ src/utils/dates.test.ts > formatRelative > formats minutes ago 0ms
+ ✓ src/utils/dates.test.ts > formatRelative > formats yesterday 0ms
+ ✓ src/utils/dates.test.ts > formatRelative > formats dates older than a week 0ms
+ ✓ src/utils/slugify.test.ts > slugify > lowercases and trims 0ms
+ ✓ src/utils/slugify.test.ts > slugify > removes diacritics 0ms
+ ✓ src/utils/slugify.test.ts > slugify > collapses repeated dashes 0ms
+ ✓ src/utils/slugify.test.ts > slugify > keeps numbers 0ms
+ ✓ src/domain/cart.test.ts > cart > starts empty 1ms
+ ✓ src/domain/cart.test.ts > cart > adds a line 0ms
+ ✓ src/domain/cart.test.ts > cart > merges lines with the same sku 0ms
+ ✓ src/domain/cart.test.ts > cart > removes a line by sku 0ms
+ ✓ src/domain/cart.test.ts > cart > rejects negative quantities 1ms
+ ✓ src/domain/cart.test.ts > cart > computes the subtotal 0ms
+ ✓ src/domain/cart.test.ts > cart > serializes to the session format 0ms
+ ✓ src/domain/cart.test.ts > cart > restores from the session format 0ms
+ ✓ src/domain/inventory.test.ts > inventory > reserves stock 2ms
+ ✓ src/domain/inventory.test.ts > inventory > releases expired reservations 1ms
+ ✓ src/domain/inventory.test.ts > inventory > refuses to oversell 0ms
+ ✓ src/domain/inventory.test.ts > inventory > handles concurrent reservations 4ms
+ ✓ src/domain/inventory.test.ts > inventory > emits low-stock events 1ms
+ ✓ src/domain/checkout.test.ts > checkout > computes subtotal 2ms
+ ✓ src/domain/checkout.test.ts > checkout > applies percentage coupon 1ms
+ × src/domain/checkout.test.ts > checkout > applies fixed coupon after tax 8ms
+   → expected 107.5 to be 105 // Object.is equality
+ ✓ src/domain/checkout.test.ts > checkout > rejects expired coupon 1ms
+ ✓ src/domain/checkout.test.ts > checkout > rejects coupon below minimum spend 0ms
+ × src/domain/checkout.test.ts > checkout > charges shipping for remote zones 4ms
+   → expected { amount: +0, currency: 'EUR' } to deeply equal { amount: 12.9, currency: 'EUR' }
+ ✓ src/domain/checkout.test.ts > checkout > waives shipping above the threshold 1ms
+ ✓ src/domain/checkout.test.ts > checkout > requires a billing address 0ms
+ ✓ src/domain/checkout.test.ts > checkout > validates the VAT number format 1ms
+ ✓ src/http/routes/orders.test.ts > GET /orders > lists orders for the current user 21ms
+ ✓ src/http/routes/orders.test.ts > GET /orders > paginates with cursor 9ms
+ ✓ src/http/routes/orders.test.ts > GET /orders > returns 401 without a session 3ms
+ ✓ src/http/routes/orders.test.ts > GET /orders/:id > returns 404 for other users' orders 4ms
+ ✓ src/http/routes/orders.test.ts > POST /orders > creates an order from the cart 18ms
+ ✓ src/http/routes/orders.test.ts > POST /orders > is idempotent with Idempotency-Key 11ms
+ ✓ src/http/routes/orders.test.ts > POST /orders > returns 409 when stock changed 7ms
+ ✓ src/http/routes/orders.test.ts > POST /orders/:id/cancel > cancels pending orders 6ms
+ ✓ src/http/routes/orders.test.ts > POST /orders/:id/cancel > refuses to cancel shipped orders 5ms
+ ✓ src/http/routes/products.test.ts > GET /products > filters by category 12ms
+ ✓ src/http/routes/products.test.ts > GET /products > sorts by price 6ms
+ ✓ src/http/routes/products.test.ts > GET /products > hides archived products 4ms
+ ✓ src/http/routes/products.test.ts > GET /products/:slug > returns the product 5ms
+ ✓ src/http/routes/products.test.ts > GET /products/:slug > returns 404 for unknown slugs 2ms
+ ✓ src/http/middleware/auth.test.ts > requireSession > rejects missing cookies 2ms
+ ✓ src/http/middleware/auth.test.ts > requireSession > rejects expired sessions 1ms
+ ✓ src/http/middleware/auth.test.ts > requireSession > refreshes sliding sessions 3ms
+ ✓ src/http/middleware/auth.test.ts > requireRole > allows admins 0ms
+ ✓ src/http/middleware/auth.test.ts > requireRole > forbids customers 1ms
+ ✓ src/http/middleware/rate-limit.test.ts > rateLimit > allows bursts up to the limit 2ms
+ ✓ src/http/middleware/rate-limit.test.ts > rateLimit > returns 429 with Retry-After 1ms
+ ✓ src/http/middleware/rate-limit.test.ts > rateLimit > resets after the window 3ms
+ ✓ src/jobs/send-receipts.test.ts > sendReceipts > sends one email per paid order 7ms
+ ✓ src/jobs/send-receipts.test.ts > sendReceipts > retries transient SMTP failures 12ms
+ ✓ src/jobs/send-receipts.test.ts > sendReceipts > marks orders as notified 2ms
+ ✓ src/jobs/cleanup-carts.test.ts > cleanupCarts > deletes carts older than 30 days 3ms
+ ✓ src/jobs/cleanup-carts.test.ts > cleanupCarts > keeps carts of logged-in users 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/checkout.test.ts > checkout > applies fixed coupon after tax
+AssertionError: expected 107.5 to be 105 // Object.is equality
+
+- Expected
++ Received
+
+- 105
++ 107.5
+
+ ❯ src/domain/checkout.test.ts:58:34
+     56|     const order = checkout(cart, { coupon: 'FIXED5', taxRate: 0.075 });
+     57| 
+     58|     expect(order.total.amount).toBe(105);
+       |                                  ^
+     59|   });
+     60| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/domain/checkout.test.ts > checkout > charges shipping for remote zones
+AssertionError: expected { amount: +0, currency: 'EUR' } to deeply equal { amount: 12.9, currency: 'EUR' }
+
+- Expected
++ Received
+
+  {
+-   "amount": 12.9,
++   "amount": 0,
+    "currency": "EUR",
+  }
+
+ ❯ src/domain/checkout.test.ts:91:28
+     89|     const order = checkout(cart, { zone: 'remote-islands' });
+     90| 
+     91|     expect(order.shipping).toEqual({ amount: 12.9, currency: 'EUR' });
+       |                            ^
+     92|   });
+     93| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed | 11 passed (12)
+      Tests  2 failed | 68 passed (70)
+   Start at  14:03:27
+   Duration  2.84s (transform 412ms, setup 0ms, collect 1.91s, tests 236ms, environment 2ms, prepare 1.08s)
+

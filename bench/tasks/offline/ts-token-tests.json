@@ -1,0 +1,15 @@
+{
+  "id": "ts-token-tests",
+  "category": "test-search",
+  "prompt": "Which tests cover token expiry and the requireAuth middleware, and which source functions do they exercise?",
+  "required": [
+    { "ref": "test/token.test.ts", "level": "map" },
+    { "ref": "test/auth-middleware.test.ts", "level": "map" },
+    { "ref": "test/token.test.ts#verifyToken > rejects a token that expired minutes ago", "level": "source" },
+    { "ref": "test/auth-middleware.test.ts#requireAuth > rejects a token that expired an hour ago", "level": "source" },
+    { "ref": "src/server/auth/token.ts#isExpired", "level": "signature" },
+    { "ref": "src/server/auth/middleware.ts#requireAuth", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts"],
+  "notes": "Test symbols use the documented 'suite > test title' qualified names. The legacy folder has no tests and must not be linked."
+}

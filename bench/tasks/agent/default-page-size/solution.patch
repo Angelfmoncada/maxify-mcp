@@ -1,0 +1,66 @@
+diff --git a/README.md b/README.md
+index 86382bf..1943bea 100644
+--- a/README.md
++++ b/README.md
+@@ -61,7 +61,7 @@ All routes except `/health`, `/auth/register` and `/auth/login` need an `Authori
+ | `DELETE /tasks/:id`         | owner or admin     | Delete a task                                      |
+ 
+ `GET /tasks` accepts `status` (comma separated), `owner`, `q` (search), `overdue`, `sort`
+-(`createdAt`, `dueDate`, `priority`, `title`), `dir`, `page` and `pageSize`. Without `pageSize` a page holds 20 tasks.
++(`createdAt`, `dueDate`, `priority`, `title`), `dir`, `page` and `pageSize`. Without `pageSize` a page holds 25 tasks.
+ 
+ Errors share one shape: `{ "error": { "code", "message", "details" } }` with the status codes 400 (validation),
+ 401 (missing, invalid or expired token), 403 (not allowed), 404, 405 and 409 (invalid status move or duplicate email).
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 9911145..1474e1a 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -71,7 +71,7 @@ Every successful create, update, status change and delete publishes an event on
+ ## Listing, filtering and export
+ 
+ `GET /tasks` parses the query string with `parseTaskFilter` and applies `filterTasks`, `sortTasks` and `paginate`
+-in that order (`queryTasks`). Pages hold `DEFAULT_PAGE_SIZE` (20) tasks unless `pageSize` is given, capped at
++in that order (`queryTasks`). Pages hold `DEFAULT_PAGE_SIZE` (25) tasks unless `pageSize` is given, capped at
+ `MAX_PAGE_SIZE` (100). `GET /tasks/export.csv` serializes every task with `tasksToCsv`. The CSV escaping lives
+ in `lib/legacy-csv.cjs`, a CommonJS file that the ops team's nightly report script also requires, so
+ `tasks/export.ts` loads it through `createRequire`.
+diff --git a/src/shared/constants.ts b/src/shared/constants.ts
+index c861706..8904874 100644
+--- a/src/shared/constants.ts
++++ b/src/shared/constants.ts
+@@ -9,7 +9,7 @@ export const MAX_DESCRIPTION_LENGTH = 2000;
+ export const MIN_PASSWORD_LENGTH = 8;
+ 
+ /** Number of tasks returned per page when the client does not ask for a size. */
+-export const DEFAULT_PAGE_SIZE = 20;
++export const DEFAULT_PAGE_SIZE = 25;
+ export const MAX_PAGE_SIZE = 100;
+ 
+ /** Lifetime of a freshly issued bearer token. */
+diff --git a/test/app.test.ts b/test/app.test.ts
+index f85dffb..ebfff46 100644
+--- a/test/app.test.ts
++++ b/test/app.test.ts
+@@ -103,17 +103,17 @@ describe('task endpoints', () => {
+     assert.equal(denied.status, 403);
+   });
+ 
+-  it('lists the first 20 tasks by default', async () => {
++  it('lists the first 25 tasks by default', async () => {
+     const { app } = createTestApp();
+     const admin = await signUp(app, 'admin@example.com');
+-    for (let index = 0; index < 25; index += 1) {
++    for (let index = 0; index < 30; index += 1) {
+       app.repositories.tasks.create(admin.userId, { title: `Task ${index}` }, new Date());
+     }
+     const response = await app.handle(authed(admin, 'GET', '/tasks'));
+     const page = response.body as { items: TaskBody[]; total: number; pageSize: number };
+-    assert.equal(page.items.length, 20);
+-    assert.equal(page.pageSize, 20);
+-    assert.equal(page.total, 25);
++    assert.equal(page.items.length, 25);
++    assert.equal(page.pageSize, 25);
++    assert.equal(page.total, 30);
+   });
+ 
+   it('exports tasks as CSV and quotes titles containing commas', async () => {

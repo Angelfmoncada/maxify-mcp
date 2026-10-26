@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: parseConfig
+    # Subtest: reads defaults
+    ok 1 - reads defaults
+      ---
+      duration_ms: 0.812
+      ...
+    # Subtest: merges env overrides
+    ok 2 - merges env overrides
+      ---
+      duration_ms: 0.301
+      ...
+    # Subtest: resolves relative paths against the config file
+    ok 3 - resolves relative paths against the config file
+      ---
+      duration_ms: 0.254
+      ...
+    # Subtest: rejects unknown keys
+    not ok 4 - rejects unknown keys
+      ---
+      duration_ms: 1.92
+      location: '/home/dev/cli/test/config.test.js:38:3'
+      failureType: 'testCodeFailure'
+      error: 'Missing expected exception (ConfigError).'
+      code: 'ERR_ASSERTION'
+      expected: 
+      operator: 'throws'
+      stack: |-
+        TestContext.<anonymous> (file:///home/dev/cli/test/config.test.js:41:12)
+        Test.runInAsyncScope (node:async_hooks:206:9)
+        Test.run (node:internal/test_runner/test:631:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:374:18)
+        Test.postRun (node:internal/test_runner/test:715:19)
+        Test.run (node:internal/test_runner/test:673:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:374:7)
+      ...
+    # Subtest: supports JSON with comments
+    ok 5 - supports JSON with comments
+      ---
+      duration_ms: 0.444
+      ...
+    1..5
+not ok 1 - parseConfig
+  ---
+  duration_ms: 4.511
+  type: 'suite'
+  location: '/home/dev/cli/test/config.test.js:5:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: formatTable
+    # Subtest: pads columns
+    ok 1 - pads columns
+      ---
+      duration_ms: 0.512
+      ...
+    # Subtest: truncates long cells with an ellipsis
+    ok 2 - truncates long cells with an ellipsis
+      ---
+      duration_ms: 0.198
+      ...
+    # Subtest: right-aligns numbers
+    ok 3 - right-aligns numbers
+      ---
+      duration_ms: 0.171
+      ...
+    # Subtest: handles wide unicode characters
+    ok 4 - handles wide unicode characters
+      ---
+      duration_ms: 0.233
+      ...
+    1..4
+ok 2 - formatTable
+  ---
+  duration_ms: 1.402
+  type: 'suite'
+  ...
+# Subtest: cli
+    # Subtest: prints help with --help
+    ok 1 - prints help with --help
+      ---
+      duration_ms: 23.11
+      ...
+    # Subtest: prints the version with -v
+    ok 2 - prints the version with -v
+      ---
+      duration_ms: 19.82
+      ...
+    # Subtest: exits with code 2 on unknown flags
+    ok 3 - exits with code 2 on unknown flags
+      ---
+      duration_ms: 18.04
+      ...
+    # Subtest: reads stdin when no file is given
+    ok 4 - reads stdin when no file is given
+      ---
+      duration_ms: 25.66
+      ...
+    # Subtest: writes JSON with --json
+    ok 5 - writes JSON with --json
+      ---
+      duration_ms: 21.37
+      ...
+    # Subtest: supports --watch
+    ok 6 - supports --watch # SKIP
+      ---
+      duration_ms: 0.091
+      ...
+    1..6
+ok 3 - cli
+  ---
+  duration_ms: 110.6
+  type: 'suite'
+  ...
+1..3
+# tests 15
+# suites 3
+# pass 13
+# fail 1
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 312.4501

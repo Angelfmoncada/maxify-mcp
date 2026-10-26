@@ -1,0 +1,75 @@
+
+> users-service@2.3.1 test
+> mocha --recursive test/
+
+
+  AuthController
+    POST /login
+      ✔ returns a session cookie for valid credentials (48ms)
+      ✔ returns 401 for a wrong password
+      ✔ locks the account after 5 failed attempts (112ms)
+      ✔ does not reveal whether the email exists
+    POST /logout
+      ✔ clears the session cookie
+      ✔ is a no-op without a session
+
+  PasswordPolicy
+    ✔ requires at least 12 characters
+    ✔ rejects passwords from the breach list (31ms)
+    ✔ accepts long passphrases
+    - enforces rotation every 90 days
+
+  UserService
+    #create()
+      ✔ creates a user with a hashed password (95ms)
+      ✔ rejects duplicate emails
+      ✔ normalizes emails to lowercase
+      1) assigns the default role
+    #findByEmail()
+      ✔ returns null for unknown emails
+      ✔ is case-insensitive
+    #update()
+      ✔ updates the display name
+      ✔ refuses to change the email without verification
+      2) bumps updatedAt on every change
+    #delete()
+      ✔ soft-deletes the user
+      ✔ anonymizes personal data after 30 days (54ms)
+
+  TokenService
+    ✔ signs access tokens with RS256
+    ✔ embeds the user id in the sub claim
+    ✔ expires access tokens after 15 minutes
+    ✔ refuses tokens signed with another key
+    ✔ refuses tokens with alg none
+
+
+  23 passing (1s)
+  1 pending
+  2 failing
+
+  1) UserService
+       #create()
+         assigns the default role:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'guest' !== 'member'
+
+      + expected - actual
+
+      -'guest'
+      +'member'
+      
+      at Context.<anonymous> (test/user-service.spec.js:58:14)
+      at process.processImmediate (node:internal/timers:476:21)
+
+  2) UserService
+       #update()
+         bumps updatedAt on every change:
+     Error: Timeout of 2000ms exceeded. For async tests and hooks, ensure "done()" is called; if returning a Promise, ensure it resolves. (/home/dev/users-service/test/user-service.spec.js)
+      at listOnTimeout (node:internal/timers:573:17)
+      at process.processTimers (node:internal/timers:514:7)
+
+
+

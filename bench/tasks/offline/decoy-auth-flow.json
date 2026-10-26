@@ -1,0 +1,13 @@
+{
+  "id": "decoy-auth-flow",
+  "category": "decoy",
+  "prompt": "How does the server authenticate a request? I need to know which function issues the bearer token and which one verifies it on every call.",
+  "required": [
+    { "ref": "src/server/auth/token.ts#signToken", "level": "signature" },
+    { "ref": "src/server/auth/token.ts#verifyToken", "level": "source" },
+    { "ref": "src/server/auth/middleware.ts#requireAuth", "level": "source" },
+    { "ref": "src/server/auth/service.ts#AuthService.issueSession", "level": "source" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts", "src/legacy/auth/login.ts", "src/web/utils/tokenize.ts"],
+  "notes": "The legacy folder defines signToken and verifyToken with the same names, and web/utils/tokenize.ts shares the word token: both are unrelated to the live bearer-token flow."
+}

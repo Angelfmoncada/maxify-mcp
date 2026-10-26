@@ -1,0 +1,17 @@
+{
+  "id": "pe-rename-method",
+  "category": "post-edit",
+  "prompt": "Show me the TaskService method that moves a task to another status and the route handler that calls it.",
+  "required": [
+    { "ref": "src/server/tasks/service.ts#TaskService.changeStatus", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#changeStatusHandler", "level": "source" }
+  ],
+  "forbidden": ["src/server/tasks/service.ts#TaskService.updateStatus"],
+  "edit": {
+    "file": "src/server/tasks/service.ts",
+    "find": "  updateStatus(actor: AuthUser, id: string, rawStatus: unknown): Task {",
+    "replace": "  changeStatus(actor: AuthUser, id: string, rawStatus: unknown): Task {"
+  },
+  "forbiddenText": ["updateStatus(actor: AuthUser"],
+  "notes": "Freshness check: the renamed method is found under its new name and the stale name is not served as a symbol or as stale declaration text. The route handler still calls the old name, which is legitimate content."
+}

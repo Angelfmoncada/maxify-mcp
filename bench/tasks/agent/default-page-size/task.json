@@ -1,0 +1,11 @@
+{
+  "id": "default-page-size",
+  "title": "Tiny change: default page size 20 to 25",
+  "category": "tiny",
+  "prompt": "Change the default page size for task listings from 20 to 25. Keep the maximum page size as it is, and keep `npm test` green.",
+  "maxTurns": 20,
+  "timeoutMs": 600000,
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": false }
+}

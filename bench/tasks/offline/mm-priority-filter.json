@@ -1,0 +1,16 @@
+{
+  "id": "mm-priority-filter",
+  "category": "multi-module",
+  "prompt": "Add a priority filter to GET /tasks (for example ?priority=high,urgent), parsed and validated like the existing status filter, and let the web client request it.",
+  "required": [
+    { "ref": "src/server/tasks/filters.ts#TaskFilter", "level": "source" },
+    { "ref": "src/server/tasks/filters.ts#parseTaskFilter", "level": "source" },
+    { "ref": "src/server/tasks/filters.ts#filterTasks", "level": "source" },
+    { "ref": "src/shared/constants.ts#TASK_PRIORITIES", "level": "signature" },
+    { "ref": "src/web/api/client.ts#TaskQuery", "level": "source" },
+    { "ref": "src/web/api/client.ts#toQueryString", "level": "source" },
+    { "ref": "src/server/tasks/routes.ts#listTasksHandler", "level": "signature" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts"],
+  "notes": "Server filter parsing, the shared constant used to validate values, and the client query builder must change together."
+}

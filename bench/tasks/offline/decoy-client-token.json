@@ -1,0 +1,11 @@
+{
+  "id": "decoy-client-token",
+  "category": "decoy",
+  "prompt": "Where does the browser keep the sign-in token and how is it attached to API calls?",
+  "required": [
+    { "ref": "src/web/hooks/useAuth.tsx#readStoredToken", "level": "source" },
+    { "ref": "src/web/api/client.ts#createApiClient", "level": "source" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts", "src/web/utils/tokenize.ts"],
+  "notes": "The client side only stores and forwards the token. Server-side signing and verification (src/server/auth/token.ts) is related background but not the answer, so it is not forbidden."
+}

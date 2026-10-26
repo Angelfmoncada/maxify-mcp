@@ -1,0 +1,5 @@
+# Keep fixtures, task specs and patches byte-stable across platforms:
+# line ranges and `git apply` contexts depend on LF line endings.
+fixtures/** text eol=lf
+tasks/** text eol=lf
+agent/** text eol=lf

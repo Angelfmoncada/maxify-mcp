@@ -1,0 +1,18 @@
+{
+  "id": "explain-plugin-loading",
+  "title": "Which plugins load at runtime (uncertainty, read-only)",
+  "category": "question",
+  "prompt": "Answer from the code and do not change any file. Which plugin modules does the server load when it starts, how does it choose them, and can you tell from the source alone which files will be imported at runtime? Name the files involved and say explicitly what you cannot determine from the source.",
+  "maxTurns": 20,
+  "timeoutMs": 600000,
+  "referenceAnswer": "reference-answer.txt",
+  "wrongAnswer": "wrong-answer.txt",
+  "answerChecks": {
+    "mustMatch": ["loader\\.ts", "audit-log", "PLUGINS"],
+    "mustMatchAny": [
+      ["dynamic[ -]import", "computed", "built at runtime", "assembled at runtime", "template literal", "runtime-computed", "constructed at runtime"],
+      ["cannot (be )?(determine|know|tell|resolve)", "can't (determine|know|tell)", "can not (determine|know|tell)", "not (be )?(known|determinable|statically)", "depends on (the )?(configuration|config|PLUGINS|environment)", "only known at runtime", "decided at runtime"]
+    ],
+    "mustNotMatch": ["(?:stripe|sendgrid|redis|datadog|sentry|webhook|metrics)\\.ts"]
+  }
+}

@@ -1,0 +1,79 @@
+=== RUN   TestParseDuration
+=== RUN   TestParseDuration/seconds
+=== RUN   TestParseDuration/minutes
+=== RUN   TestParseDuration/hours_and_minutes
+=== RUN   TestParseDuration/invalid_unit
+--- PASS: TestParseDuration (0.00s)
+    --- PASS: TestParseDuration/seconds (0.00s)
+    --- PASS: TestParseDuration/minutes (0.00s)
+    --- PASS: TestParseDuration/hours_and_minutes (0.00s)
+    --- PASS: TestParseDuration/invalid_unit (0.00s)
+=== RUN   TestRateLimiter_Allow
+    limiter_test.go:47: Allow() at t=1.5s = false; want true
+    limiter_test.go:52: tokens left = 0; want 1
+--- FAIL: TestRateLimiter_Allow (0.00s)
+=== RUN   TestRateLimiter_Burst
+--- PASS: TestRateLimiter_Burst (0.01s)
+=== RUN   TestRateLimiter_Refill
+    limiter_test.go:88: refill rate 10/s, waited 250ms
+--- PASS: TestRateLimiter_Refill (0.25s)
+=== RUN   TestRateLimiter_Concurrent
+--- PASS: TestRateLimiter_Concurrent (0.03s)
+FAIL
+FAIL	github.com/acme/gateway/internal/ratelimit	0.302s
+=== RUN   TestRouter_Match
+=== RUN   TestRouter_Match/static
+=== RUN   TestRouter_Match/param
+=== RUN   TestRouter_Match/wildcard
+--- PASS: TestRouter_Match (0.00s)
+    --- PASS: TestRouter_Match/static (0.00s)
+    --- PASS: TestRouter_Match/param (0.00s)
+    --- PASS: TestRouter_Match/wildcard (0.00s)
+=== RUN   TestRouter_MethodNotAllowed
+--- PASS: TestRouter_MethodNotAllowed (0.00s)
+=== RUN   TestRouter_TrailingSlashRedirect
+--- PASS: TestRouter_TrailingSlashRedirect (0.00s)
+PASS
+ok  	github.com/acme/gateway/internal/router	0.009s
+=== RUN   TestConfig_Load
+--- PASS: TestConfig_Load (0.00s)
+=== RUN   TestConfig_EnvOverride
+--- PASS: TestConfig_EnvOverride (0.00s)
+=== RUN   TestConfig_Validate
+--- PASS: TestConfig_Validate (0.00s)
+PASS
+ok  	github.com/acme/gateway/internal/config	0.006s
+=== RUN   TestCache_Get
+--- PASS: TestCache_Get (0.00s)
+=== RUN   TestCache_Evict
+--- FAIL: TestCache_Evict (0.00s)
+panic: runtime error: index out of range [3] with length 3 [recovered]
+	panic: runtime error: index out of range [3] with length 3
+
+goroutine 21 [running]:
+testing.tRunner.func1.2({0x5d4a20, 0xc0000b2018})
+	/usr/local/go/src/testing/testing.go:1545 +0x238
+testing.tRunner.func1()
+	/usr/local/go/src/testing/testing.go:1548 +0x397
+panic({0x5d4a20?, 0xc0000b2018?})
+	/usr/local/go/src/runtime/panic.go:914 +0x21f
+github.com/acme/gateway/internal/cache.(*LRU).evictOldest(...)
+	/home/dev/gateway/internal/cache/lru.go:88
+github.com/acme/gateway/internal/cache.(*LRU).Put(0xc0000a6060, {0x5f1c2e, 0x1}, {0x5c4b80, 0x6b8f40})
+	/home/dev/gateway/internal/cache/lru.go:61 +0x1d4
+github.com/acme/gateway/internal/cache.TestCache_Evict(0xc0000c0340)
+	/home/dev/gateway/internal/cache/lru_test.go:34 +0x14a
+testing.tRunner(0xc0000c0340, 0x60d8b8)
+	/usr/local/go/src/testing/testing.go:1595 +0xff
+created by testing.(*T).Run in goroutine 1
+	/usr/local/go/src/testing/testing.go:1648 +0x3ad
+exit status 2
+FAIL	github.com/acme/gateway/internal/cache	0.011s
+=== RUN   TestHealthHandler
+--- PASS: TestHealthHandler (0.00s)
+=== RUN   TestReadyHandler_DependencyDown
+--- PASS: TestReadyHandler_DependencyDown (0.00s)
+PASS
+ok  	github.com/acme/gateway/internal/health	0.004s
+?   	github.com/acme/gateway/cmd/gateway	[no test files]
+FAIL

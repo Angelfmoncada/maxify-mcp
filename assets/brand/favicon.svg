@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32">
+  <!-- Maxify favicon: the mark hinted to a 16-unit pixel grid (1px context lines and bracket arms). -->
+  <path fill="#0F1A2A" d="M3.5 0H12.5A3.5 3.5 0 0 1 16 3.5V12.5A3.5 3.5 0 0 1 12.5 16H3.5A3.5 3.5 0 0 1 0 12.5V3.5A3.5 3.5 0 0 1 3.5 0Z"/>
+  <path fill="#56677F" d="M3 3H7V4H3ZM3 5H8V6H3ZM3 10H7V11H3ZM3 12H6V13H3Z"/>
+  <path fill="#F4F6F9" d="M10 2H12V6H10ZM8 2H10V3H8ZM10 10H12V14H10ZM8 13H10V14H8Z"/>
+  <path fill="#FFB938" d="M3 7H14V9H3Z"/>
+</svg>

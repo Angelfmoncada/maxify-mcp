@@ -1,0 +1,97 @@
+
+> admin-ui@3.2.0 build
+> webpack --mode production
+
+assets by status 2.36 MiB [cached] 14 assets
+assets by path static/js/ 1.98 MiB
+  asset static/js/main.4f3c2b1a.js 1.21 MiB [emitted] [immutable] [minimized] [big] (name: main) 1 related asset
+  asset static/js/vendors.9a8b7c6d.js 842 KiB [emitted] [immutable] [minimized] [big] (id hint: vendors) 2 related assets
+  asset static/js/runtime.1e2f3a4b.js 3.12 KiB [emitted] [immutable] [minimized] (name: runtime) 1 related asset
+  asset static/js/412.8c7d6e5f.js 21.4 KiB [emitted] [immutable] [minimized] 1 related asset
+  asset static/js/597.0a1b2c3d.js 14.9 KiB [emitted] [immutable] [minimized] 1 related asset
+  asset static/js/731.5e6f7a8b.js 9.87 KiB [emitted] [immutable] [minimized] 1 related asset
+assets by path static/css/ 61.2 KiB
+  asset static/css/main.7b8c9d0e.css 58.4 KiB [emitted] [immutable] [minimized] (name: main) 1 related asset
+  asset static/css/412.3f4a5b6c.css 2.81 KiB [emitted] [immutable] [minimized] 1 related asset
+asset index.html 1.37 KiB [emitted]
+asset asset-manifest.json 1.02 KiB [emitted]
+Entrypoint main [big] 2.05 MiB (5.61 MiB) = static/js/runtime.1e2f3a4b.js 3.12 KiB static/js/vendors.9a8b7c6d.js 842 KiB static/css/main.7b8c9d0e.css 58.4 KiB static/js/main.4f3c2b1a.js 1.21 MiB 4 auxiliary assets
+orphan modules 1.92 MiB [orphan] 412 modules
+runtime modules 2.47 KiB 12 modules
+cacheable modules 3.14 MiB
+  modules by path ./node_modules/ 2.61 MiB 287 modules
+    modules by path ./node_modules/@mui/ 912 KiB 133 modules
+    modules by path ./node_modules/react-dom/ 131 KiB 2 modules
+    modules by path ./node_modules/lodash/ 544 KiB 96 modules
+    modules by path ./node_modules/date-fns/ 312 KiB 41 modules
+    modules by path ./node_modules/recharts/ 498 KiB 15 modules
+  modules by path ./src/ 541 KiB
+    modules by path ./src/components/ 212 KiB 64 modules
+    modules by path ./src/pages/ 168 KiB 31 modules
+    modules by path ./src/hooks/ 41.2 KiB 22 modules
+    modules by path ./src/api/ 38.9 KiB 17 modules
+    modules by path ./src/utils/ 27.4 KiB 19 modules
+    modules by path ./src/styles/ 53.6 KiB 8 modules
+    ./src/index.tsx + 41 modules 129 KiB [built] [code generated]
+    ./src/serviceWorkerRegistration.ts 4.12 KiB [built] [code generated]
+
+WARNING in asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+This can impact web performance.
+Assets:
+  static/js/main.4f3c2b1a.js (1.21 MiB)
+  static/js/vendors.9a8b7c6d.js (842 KiB)
+
+WARNING in entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+Entrypoints:
+  main (2.05 MiB)
+      static/js/runtime.1e2f3a4b.js
+      static/js/vendors.9a8b7c6d.js
+      static/css/main.7b8c9d0e.css
+      static/js/main.4f3c2b1a.js
+
+ERROR in ./src/components/Checkout/PaymentForm.tsx 42:18
+Module parse failed: Unexpected token (42:18)
+File was processed with these loaders:
+ * ./node_modules/ts-loader/index.js
+You may need an additional loader to handle the result of these loaders.
+|   return (
+|     <form onSubmit={handleSubmit}>
+>       <CardElement options={{ hidePostalCode: true }} />
+|     </form>
+|   );
+ @ ./src/pages/Checkout.tsx 18:0-59 51:42-53
+ @ ./src/App.tsx 27:0-43 88:38-46
+ @ ./src/index.tsx 9:0-24 21:36-39
+
+ERROR in ./src/pages/Orders.tsx 6:0-46
+Module not found: Error: Can't resolve '@/hooks/useOrders' in '/home/dev/admin-ui/src/pages'
+resolve '@/hooks/useOrders' in '/home/dev/admin-ui/src/pages'
+  Parsed request is a module
+  using description file: /home/dev/admin-ui/package.json (relative path: ./src/pages)
+    Field 'browser' doesn't contain a valid alias configuration
+    resolve as module
+      /home/dev/admin-ui/src/pages/node_modules doesn't exist or is not a directory
+      /home/dev/admin-ui/src/node_modules doesn't exist or is not a directory
+      looking for modules in /home/dev/admin-ui/node_modules
+        single file module
+          using description file: /home/dev/admin-ui/package.json (relative path: ./node_modules/@/hooks/useOrders)
+            no extension
+              Field 'browser' doesn't contain a valid alias configuration
+              /home/dev/admin-ui/node_modules/@/hooks/useOrders doesn't exist
+            .tsx
+              Field 'browser' doesn't contain a valid alias configuration
+              /home/dev/admin-ui/node_modules/@/hooks/useOrders.tsx doesn't exist
+            .ts
+              Field 'browser' doesn't contain a valid alias configuration
+              /home/dev/admin-ui/node_modules/@/hooks/useOrders.ts doesn't exist
+            .js
+              Field 'browser' doesn't contain a valid alias configuration
+              /home/dev/admin-ui/node_modules/@/hooks/useOrders.js doesn't exist
+        /home/dev/admin-ui/node_modules/@/hooks/useOrders doesn't exist
+      /home/dev/node_modules doesn't exist or is not a directory
+      /home/node_modules doesn't exist or is not a directory
+      /node_modules doesn't exist or is not a directory
+ @ ./src/App.tsx 31:0-37 95:38-44
+ @ ./src/index.tsx 9:0-24 21:36-39
+
+webpack 5.91.0 compiled with 2 errors and 2 warnings in 8423 ms

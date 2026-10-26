@@ -1,0 +1,12 @@
+{
+  "id": "fix-failing-status-rules",
+  "title": "Test suite fails on status transition rules",
+  "category": "failing-test",
+  "prompt": "`npm test` is failing. Find the cause in the source code and fix it so the whole suite passes again. Do not edit, skip or delete any test.",
+  "maxTurns": 30,
+  "timeoutMs": 900000,
+  "setupPatch": "setup.patch",
+  "hiddenTest": "hidden.test.ts",
+  "solutionPatch": "solution.patch",
+  "expect": { "visibleFailsAfterSetup": true }
+}

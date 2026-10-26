@@ -1,0 +1,62 @@
+
+Running 24 tests using 4 workers
+
+  ✓   1 [chromium] › tests/auth/login.spec.ts:8:7 › login › shows validation errors (1.4s)
+  ✓   2 [chromium] › tests/auth/login.spec.ts:19:7 › login › logs in with valid credentials (2.1s)
+  ✓   3 [chromium] › tests/auth/logout.spec.ts:6:7 › logout › clears the session (1.2s)
+  ✓   4 [chromium] › tests/catalog/browse.spec.ts:10:7 › browse › paginates the product grid (2.8s)
+  ✓   5 [chromium] › tests/catalog/browse.spec.ts:27:7 › browse › opens a product page (1.9s)
+  ✘   6 [chromium] › tests/checkout/payment.spec.ts:22:7 › payment › completes purchase with saved card (12.3s)
+  ✓   7 [chromium] › tests/checkout/address.spec.ts:9:7 › address › autocompletes the postal code (2.2s)
+  ✓   8 [chromium] › tests/search/filters.spec.ts:12:7 › filters › filters by brand (1.7s)
+  ✓   9 [firefox] › tests/auth/login.spec.ts:8:7 › login › shows validation errors (1.9s)
+  ✓  10 [firefox] › tests/auth/login.spec.ts:19:7 › login › logs in with valid credentials (2.6s)
+  ✓  11 [firefox] › tests/auth/logout.spec.ts:6:7 › logout › clears the session (1.5s)
+  ✓  12 [firefox] › tests/catalog/browse.spec.ts:10:7 › browse › paginates the product grid (3.1s)
+  ✓  13 [firefox] › tests/catalog/browse.spec.ts:27:7 › browse › opens a product page (2.4s)
+  ✓  14 [firefox] › tests/checkout/payment.spec.ts:22:7 › payment › completes purchase with saved card (6.8s)
+  ✓  15 [firefox] › tests/checkout/address.spec.ts:9:7 › address › autocompletes the postal code (2.5s)
+  ✘  16 [firefox] › tests/search/filters.spec.ts:41:7 › filters › clears all filters (5.2s)
+  ✓  17 [firefox] › tests/search/filters.spec.ts:41:7 › filters › clears all filters (retry #1) (2.3s)
+  ✓  18 [webkit] › tests/auth/login.spec.ts:8:7 › login › shows validation errors (2.2s)
+  ✓  19 [webkit] › tests/auth/login.spec.ts:19:7 › login › logs in with valid credentials (3.0s)
+  ✓  20 [webkit] › tests/auth/logout.spec.ts:6:7 › logout › clears the session (1.8s)
+  ✓  21 [webkit] › tests/catalog/browse.spec.ts:10:7 › browse › paginates the product grid (3.6s)
+  ✓  22 [webkit] › tests/catalog/browse.spec.ts:27:7 › browse › opens a product page (2.7s)
+  ✓  23 [webkit] › tests/checkout/address.spec.ts:9:7 › address › autocompletes the postal code (2.9s)
+  ✓  24 [webkit] › tests/search/filters.spec.ts:12:7 › filters › filters by brand (2.0s)
+
+
+  1) [chromium] › tests/checkout/payment.spec.ts:22:7 › payment › completes purchase with saved card 
+
+    Error: Timed out 10000ms waiting for expect(locator).toBeVisible()
+
+    Locator: getByRole('heading', { name: 'Order confirmed' })
+    Expected: visible
+    Received: <element(s) not found>
+    Call log:
+      - expect.toBeVisible with timeout 10000ms
+      - waiting for getByRole('heading', { name: 'Order confirmed' })
+
+
+      28 |     await page.getByRole('button', { name: 'Pay now' }).click();
+      29 |
+    > 30 |     await expect(page.getByRole('heading', { name: 'Order confirmed' })).toBeVisible({ timeout: 10_000 });
+         |                                                                          ^
+      31 |   });
+      32 | });
+      33 |
+
+        at /home/dev/storefront/tests/checkout/payment.spec.ts:30:74
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/checkout-payment-payment-completes-purchase-with-saved-card-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/checkout-payment-payment-completes-purchase-with-saved-card-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/checkout/payment.spec.ts:22:7 › payment › completes purchase with saved card 
+  1 flaky
+    [firefox] › tests/search/filters.spec.ts:41:7 › filters › clears all filters 
+  22 passed (48.2s)

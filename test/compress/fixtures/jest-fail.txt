@@ -1,0 +1,126 @@
+
+> shop-web@1.4.0 test
+> jest --verbose --ci
+
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [2msrc/utils/__tests__/[22m[1mformat.test.js[22m
+  formatPrice
+    [32m✓[39m [2mformats integers with two decimals (3 ms)[22m
+    [32m✓[39m [2muses the locale thousands separator (1 ms)[22m
+    [32m✓[39m [2mprints free for zero amounts[22m
+  formatDate
+    [32m✓[39m [2mformats ISO dates in the user time zone (2 ms)[22m
+    [32m✓[39m [2mfalls back to UTC[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [2msrc/api/__tests__/[22m[1mclient.test.js[22m
+  ApiClient
+    ✓ sends the bearer token (12 ms)
+    ✓ retries 502 responses twice (31 ms)
+    ✓ does not retry 4xx responses (4 ms)
+    ✓ parses problem+json errors (3 ms)
+    ✓ aborts after the timeout (105 ms)
+    ✓ serializes query params in a stable order (1 ms)
+ FAIL  src/cart/__tests__/cart.test.js
+  Cart
+    ✓ starts empty (2 ms)
+    ✓ adds an item (1 ms)
+    ✕ removes an item by id (6 ms)
+    ✕ computes total with discount (3 ms)
+    ✓ ignores unknown skus on remove (1 ms)
+    ✓ persists to localStorage (2 ms)
+  console.warn
+    Cart: discount percent 10 applied twice
+
+      58 |   applyDiscount(discount) {
+      59 |     if (this.discounts.includes(discount.code)) {
+    > 60 |       console.warn(`Cart: discount percent ${discount.percent} applied twice`);
+         |               ^
+      61 |     }
+
+      at Cart.warn [as applyDiscount] (src/cart/cart.js:60:15)
+      at Object.applyDiscount (src/cart/__tests__/cart.test.js:50:10)
+
+  ● Cart › removes an item by id
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"id": "sku-1", "qty": 1}, {"id": "sku-2", "qty": 3}]
+
+      40 |     cart.add({ id: 'sku-2', qty: 3 });
+      41 |     cart.remove('sku-2');
+    > 42 |     expect(cart.items).toHaveLength(1);
+         |                        ^
+      43 |   });
+      44 |
+      45 |   test('computes total with discount', () => {
+
+      at Object.toHaveLength (src/cart/__tests__/cart.test.js:42:24)
+
+  ● Cart › computes total with discount
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 90
+    Received: 100
+
+      50 |     cart.applyDiscount({ code: 'TEN', percent: 10 });
+      51 |
+    > 52 |     expect(cart.total()).toBe(90);
+         |                          ^
+      53 |   });
+      54 | });
+      55 |
+
+      at Object.toBe (src/cart/__tests__/cart.test.js:52:26)
+      at Promise.then.completed (node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at _runTest (node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (node_modules/jest-circus/build/run.js:126:9)
+
+ PASS  src/checkout/__tests__/address.test.js
+  validateAddress
+    ✓ accepts a complete address (2 ms)
+    ✓ requires a postal code (1 ms)
+    ✓ validates Spanish postal codes (1 ms)
+    ✓ validates German postal codes
+    ✓ uppercases country codes (1 ms)
+    ✓ trims whitespace
+ PASS  src/checkout/__tests__/shipping.test.js
+  shippingQuote
+    ✓ is free above 50 EUR (1 ms)
+    ✓ charges 4.90 EUR for standard (1 ms)
+    ✓ charges 12.90 EUR for remote islands
+    ✓ rejects unsupported countries (2 ms)
+ PASS  src/auth/__tests__/session.test.js
+  session
+    ✓ stores the refresh token in an httpOnly cookie (8 ms)
+    ✓ rotates refresh tokens (5 ms)
+    ✓ logs out on 401 (3 ms)
+    ✓ clears local state on logout (1 ms)
+    ✓ ignores stale tabs (2 ms)
+ PASS  src/search/__tests__/query.test.js
+  buildQuery
+    ✓ encodes facets (1 ms)
+    ✓ drops empty filters
+    ✓ caps page size at 100 (1 ms)
+    ✓ keeps sort stable
+ PASS  src/hooks/__tests__/useDebounce.test.js
+  useDebounce
+    ✓ delays updates (23 ms)
+    ✓ cancels on unmount (11 ms)
+    ✓ flushes on demand (12 ms)
+ PASS  src/components/__tests__/Button.test.js
+  Button
+    ✓ renders children (19 ms)
+    ✓ is disabled while loading (6 ms)
+    ✓ forwards refs (3 ms)
+    ✓ matches snapshot (8 ms)
+
+Test Suites: 1 failed, 8 passed, 9 total
+Tests:       2 failed, 41 passed, 43 total
+Snapshots:   1 passed, 1 total
+Time:        4.218 s
+Ran all test suites.

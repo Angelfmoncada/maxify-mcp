@@ -1,0 +1,14 @@
+{
+  "id": "unc-plugin-dynamic-import",
+  "category": "uncertainty",
+  "prompt": "Which plugin modules can the server load at runtime, and how are they selected?",
+  "required": [
+    { "ref": "src/server/plugins/loader.ts#loadPlugin", "level": "source" },
+    { "ref": "src/server/config.ts#loadConfig", "level": "source" },
+    { "ref": "src/server/plugins/builtin/audit-log.ts", "level": "map" },
+    { "ref": "src/server/plugins/builtin/slack-notify.ts", "level": "map" }
+  ],
+  "forbidden": ["src/legacy/auth/login.ts"],
+  "requireText": ["dynamic[ -]?import", "unresolved", "computed", "statically", "template"],
+  "notes": "loadPlugin imports `./builtin/${name}.ts` with a runtime-computed path. The result must flag that uncertainty instead of presenting one concrete module as the resolved target."
+}

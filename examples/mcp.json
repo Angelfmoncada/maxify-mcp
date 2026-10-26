@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "maxify": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/abs/path/to/maxify/dist/cli.js", "serve"]
+    }
+  }
+}

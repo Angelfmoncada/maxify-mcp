@@ -1,0 +1,18 @@
+{
+  "id": "pe-expiry-operator",
+  "category": "post-edit",
+  "prompt": "I just changed the comparison inside the function that decides whether a token has expired. Show me its current code and the function that calls it.",
+  "required": [
+    { "ref": "src/server/auth/token.ts#isExpired", "level": "source" },
+    { "ref": "src/server/auth/token.ts#verifyToken", "level": "source" }
+  ],
+  "forbidden": ["src/legacy/auth/session-token.ts"],
+  "edit": {
+    "file": "src/server/auth/token.ts",
+    "find": "return Math.floor(nowMs / 1000) >= payload.exp;",
+    "replace": "return Math.floor(nowMs / 1000) > payload.exp;"
+  },
+  "forbiddenText": [">= payload.exp"],
+  "requireText": ["> payload\\.exp"],
+  "notes": "Freshness check: after the edit and a re-index the returned code must show the new operator and never the stale one."
+}

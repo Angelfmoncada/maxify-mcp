@@ -1,0 +1,17 @@
+{
+  "id": "cu-labels",
+  "category": "contract-update",
+  "prompt": "Add a labels field (a list of short strings, at most 5 per task) to tasks end to end: the shared types, validation, storage, the CSV export and the task creation form.",
+  "required": [
+    { "ref": "src/shared/types.ts#Task", "level": "source" },
+    { "ref": "src/shared/types.ts#TaskInput", "level": "source" },
+    { "ref": "src/shared/validation.ts#validateTaskInput", "level": "source" },
+    { "ref": "src/shared/validation.ts#validateTaskPatch", "level": "source" },
+    { "ref": "src/server/tasks/repository.ts#TaskRepository.create", "level": "source" },
+    { "ref": "src/server/tasks/export.ts#TASK_CSV_COLUMNS", "level": "source" },
+    { "ref": "src/server/tasks/export.ts#tasksToCsv", "level": "source" },
+    { "ref": "src/web/components/TaskForm.tsx#TaskForm", "level": "source" }
+  ],
+  "forbidden": [],
+  "notes": "A new field on a shared contract: type, input validation for create and patch, storage, CSV columns and the client form all consume it."
+}
