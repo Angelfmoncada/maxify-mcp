@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,7 +12,7 @@ writeFileSync(path.join(root, 'src', 'a.ts'), 'export const a = 1;\n');
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 function shortName(dir: string): string {
-  const out = execFileSync('cmd.exe', ['/d', '/c', `for %I in ("${dir}") do @echo %~sI`], { encoding: 'utf8', windowsVerbatimArguments: true });
+  const out = spawnSync('cmd.exe', ['/d', '/c', `for %I in ("${dir}") do @echo %~sI`], { encoding: 'utf8', windowsVerbatimArguments: true }).stdout;
   return out.trim();
 }
 
@@ -24,5 +24,12 @@ describe.runIf(process.platform === 'win32')('Windows 8.3 short names', () => {
     expect(guard.resolve(path.join(root, 'src', 'not-yet-created.ts'))).toBe('src/not-yet-created.ts');
     expect(() => guard.resolve('SRC~1/a.ts')).toThrow(/Windows alias/);
     expect(() => guard.resolve(path.join(shortRoot, '..', 'outside.ts'))).toThrow(/outside/);
+  });
+
+  it('refuses UNC and device-namespace paths before touching the filesystem', () => {
+    const guard = new RepoGuard(root);
+    for (const bad of ['\\\\attacker.example\\share\\x.ts', '//attacker.example/share/x.ts', '\\\\?\\C:\\x.ts', '\\\\.\\pipe\\x']) {
+      expect(() => guard.resolve(bad)).toThrow(/network or device path/);
+    }
   });
 });

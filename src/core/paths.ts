@@ -48,6 +48,12 @@ export function assertSafeRoot(root: string): void {
   }
 }
 
+function sameVolume(a: string, b: string): boolean {
+  const rootA = path.parse(a).root;
+  const rootB = path.parse(b).root;
+  return process.platform === 'win32' ? rootA.toLowerCase() === rootB.toLowerCase() : rootA === rootB;
+}
+
 /** Real path of the deepest existing ancestor plus the remaining (not yet existing) segments. */
 function canonicalize(absolute: string): string {
   const rest: string[] = [];
@@ -125,15 +131,24 @@ export class RepoGuard {
       throw new MaxifyError('INVALID_INPUT', 'Path is empty or contains a NUL byte.');
     }
     const cleaned = input.replace(/^file:\/\//, '');
+    // UNC and device-namespace paths are refused before any filesystem access:
+    // touching \\host\share would make Windows authenticate to that host (NTLM leak).
+    if (/^[\\/]{2}/.test(cleaned)) {
+      throw new MaxifyError('OUT_OF_ROOT', `Path "${input}" is a network or device path; only paths inside the repository are allowed.`);
+    }
     const resolved = path.resolve(this.root, cleaned);
-    // Absolute inputs may spell the root differently (8.3 short names, case): compare canonical forms.
-    const absolute = path.isAbsolute(cleaned) ? canonicalize(resolved) : resolved;
-    const rel = this.relIfInside(absolute);
+    let rel = this.relIfInside(resolved);
+    // An absolute path may spell the root differently (8.3 short names). Canonicalize it only
+    // when it is on the same local volume as the root, so no other location is ever probed.
+    if (rel === null && path.isAbsolute(cleaned) && sameVolume(resolved, this.root)) {
+      rel = this.relIfInside(canonicalize(resolved));
+    }
     if (rel === null) {
       throw new MaxifyError('OUT_OF_ROOT', `Path "${input}" is outside the repository root.`);
     }
     // Alias forms only matter inside the repository, where exclusion patterns apply.
     if (process.platform === 'win32') assertPlainWindowsPath(rel, input);
+    const absolute = this.abs(rel);
     if (existsSync(absolute)) {
       const real = realpath(absolute);
       if (this.relIfInside(real) === null) {
