@@ -32,6 +32,17 @@ describe('maxify init', () => {
     expect(h.opened[0]).toMatchObject({ root: project.dir, autoIndex: false });
   });
 
+  it('warns when it runs from the npx cache, whose path npm may delete', async () => {
+    const npxCli = path.join(path.parse(process.cwd()).root, 'home', 'u', '.npm', '_npx', 'a1b2c3', 'node_modules', 'maxify-mcp', 'dist', 'cli.js');
+    const h = harness({ cliPath: npxCli });
+    expect(await h.run('init')).toBe(0);
+    expect(h.stdout()).toContain('runs from the npx cache');
+    expect(h.stdout()).toContain('npm install -g maxify-mcp');
+    const regular = harness();
+    await regular.run('init', '--force');
+    expect(regular.stdout()).not.toContain('npx cache');
+  });
+
   it('prints the next steps for Claude Code', async () => {
     const h = harness();
     await h.run('init');

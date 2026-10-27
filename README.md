@@ -13,7 +13,7 @@ It indexes a TypeScript / JavaScript / React / Node.js repository and answers a 
 
 > **Product rule:** saving tokens only counts if the agent still completes the task correctly. A token reduction with a worse resolution rate is reported as a regression.
 
-**Status:** MVP, version 0.1.0, not published to npm. Runs from a local build.
+**Status:** MVP, version 0.1.0, on npm as [`maxify-mcp`](https://www.npmjs.com/package/maxify-mcp).
 Everything runs locally and deterministically: no API keys, no embeddings, no LLM calls, no telemetry.
 
 ## What it does
@@ -35,20 +35,24 @@ Every relation is tagged:
 - Node.js **22.13 or newer** (uses the built-in `node:sqlite` with FTS5; no native build step). Tested on Node 22.22.1.
 - Claude Code (tested with 2.1.87) or any MCP client that speaks stdio.
 
-## Install (local build)
+## Install
 
 ```bash
-git clone <this repo> maxify && cd maxify
-npm ci
-npm run build
-node dist/cli.js doctor            # environment, SQLite/FTS5, TypeScript API, MCP self-test
+npm install -g maxify-mcp
+maxify doctor            # environment, SQLite/FTS5, TypeScript API, MCP self-test
 ```
-
-Optional: `npm link` puts `maxify` on your PATH (it changes your global npm setup, so it is not done for you). The examples below use `maxify`; without linking, use `node /path/to/maxify/dist/cli.js`.
 
 ## Use it with Claude Code
 
-In the repository you want to work on:
+**Every project, no global install** (user scope; the package runs through `npx`):
+
+```bash
+claude mcp add --scope user maxify -- npx -y maxify-mcp serve
+# native Windows (not WSL): npx needs a cmd wrapper
+claude mcp add --scope user maxify -- cmd /c npx -y maxify-mcp serve
+```
+
+**One project, shared with the team** (after `npm install -g maxify-mcp`), in the repository you want to work on:
 
 ```bash
 maxify init        # writes/merges .mcp.json (project scope) and builds the first index
@@ -59,10 +63,22 @@ maxify init        # writes/merges .mcp.json (project scope) and builds the firs
 ```json
 {
   "mcpServers": {
-    "maxify": { "type": "stdio", "command": "node", "args": ["/abs/path/to/maxify/dist/cli.js", "serve"] }
+    "maxify": { "type": "stdio", "command": "node", "args": ["/abs/path/to/maxify-mcp/dist/cli.js", "serve"] }
   }
 }
 ```
+
+**Other MCP clients** (any client that speaks stdio):
+
+```json
+{
+  "mcpServers": {
+    "maxify": { "command": "npx", "args": ["-y", "maxify-mcp", "serve", "--root", "/abs/path/to/your/repo"] }
+  }
+}
+```
+
+Without `CLAUDE_PROJECT_DIR` the server uses its working directory as the repository root; pass `--root` when the client starts it somewhere else.
 
 Tool overhead (measured by `maxify stats`/`doctor`, estimated tokens): about 830 tokens upfront (instructions plus the two always-loaded tools, `maxify_context` and `maxify_source`), about 2,000 if every schema is loaded; the other four tools stay deferred until Claude searches for them.
 
@@ -81,6 +97,17 @@ npm test 2>&1 | maxify compress --kind test; echo "exit=${PIPESTATUS[0]}"
 ```
 
 The compressed text keeps every failure block, assertion diff and summary line, and ends with a `blob:HASH` ref. `maxify compress --ref HASH --lines 120-180` (or `maxify_compress {ref, lines}`) returns any original range exactly.
+
+## Build from source
+
+```bash
+git clone https://github.com/Angelfmoncada/maxify-mcp.git && cd maxify-mcp
+npm ci
+npm run build
+node dist/cli.js doctor
+```
+
+Optional: `npm link` puts this build's `maxify` on your PATH (it changes your global npm setup, so it is not done for you).
 
 ## CLI
 

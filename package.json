@@ -2,7 +2,25 @@
   "name": "maxify-mcp",
   "version": "0.1.0",
   "description": "Local MCP server and CLI that compiles budgeted, verifiable code context for Claude Code.",
-  "private": true,
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "claude",
+    "claude-code",
+    "code-context",
+    "typescript",
+    "tokens"
+  ],
+  "homepage": "https://github.com/Angelfmoncada/maxify-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Angelfmoncada/maxify-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Angelfmoncada/maxify-mcp.git"
+  },
+  "author": "Angel (https://github.com/Angelfmoncada)",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -21,7 +39,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "bench": "node dist/cli.js bench"
+    "bench": "node dist/cli.js bench",
+    "prepublishOnly": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

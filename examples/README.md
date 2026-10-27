@@ -2,7 +2,7 @@
 
 ## Manual Claude Code configuration
 
-`maxify init` writes this for you. To do it by hand, put [`mcp.json`](mcp.json) in your project as `.mcp.json` and replace the path with your local build:
+`maxify init` writes this for you. To do it by hand, put [`mcp.json`](mcp.json) in your project as `.mcp.json` and replace the path with your install (`npm root -g` prints the global folder; the CLI is `maxify-mcp/dist/cli.js` inside it) or your local build:
 
 ```json
 {
@@ -20,6 +20,12 @@ Equivalent command (project scope, writes `.mcp.json`):
 
 ```bash
 claude mcp add --scope project maxify -- node /abs/path/to/maxify/dist/cli.js serve
+```
+
+Without a path on disk, through `npx` (on native Windows prefix the command with `cmd /c`):
+
+```bash
+claude mcp add --scope project maxify -- npx -y maxify-mcp serve
 ```
 
 Claude Code asks you to approve project-scoped servers the first time. `claude mcp list` should show `maxify` as connected.

@@ -36,6 +36,16 @@ function describeMergeFailure(result: Extract<MergeResult, { kind: 'conflict' | 
   );
 }
 
+/** `npx maxify-mcp init` runs from npm's cache, which npm may clean; the written path would then break. */
+function npxCacheWarning(cliPath: string): string | undefined {
+  if (!cliPath.split(/[\\/]/).includes('_npx')) return undefined;
+  return (
+    `warning: maxify runs from the npx cache (${cliPath}); npm may delete that path later.\n` +
+    '  Install it for good with "npm install -g maxify-mcp" and run "maxify init --force",\n' +
+    '  or register "npx -y maxify-mcp serve" in your MCP client yourself.'
+  );
+}
+
 function registerMcpServer(call: CommandCall, location: RepoLocation): string {
   const file = path.join(location.root, MCP_CONFIG_FILE);
   const existing = readJsonFile(file);
@@ -55,7 +65,8 @@ function registerMcpServer(call: CommandCall, location: RepoLocation): string {
     throw new MaxifyError('INVALID_INPUT', describeMergeFailure(merged));
   }
   if (merged.kind !== 'unchanged') writeJsonFile(file, merged.config);
-  return `${MERGE_MESSAGES[merged.kind]} (${file})`;
+  const warning = npxCacheWarning(call.deps.cliPath);
+  return `${MERGE_MESSAGES[merged.kind]} (${file})${warning === undefined ? '' : `\n${warning}`}`;
 }
 
 function writeConfigFile(call: CommandCall, location: RepoLocation): string {
