@@ -40,9 +40,9 @@ async function runJson(behavior: FakeEngineBehavior = {}, budgets?: number[]) {
 
 describe('normalizeBudgets', () => {
   it('defaults to 2000, 4000, 8000 and sorts and de-duplicates explicit lists', () => {
-    expect(DEFAULT_BUDGETS).toEqual([2000, 4000, 8000]);
-    expect(normalizeBudgets(undefined)).toEqual([2000, 4000, 8000]);
-    expect(normalizeBudgets([])).toEqual([2000, 4000, 8000]);
+    expect(DEFAULT_BUDGETS).toEqual([2000, 4000, 6000, 8000]);
+    expect(normalizeBudgets(undefined)).toEqual([2000, 4000, 6000, 8000]);
+    expect(normalizeBudgets([])).toEqual([2000, 4000, 6000, 8000]);
     expect(normalizeBudgets([4000, 1000, 4000])).toEqual([1000, 4000]);
   });
 
@@ -59,10 +59,10 @@ describe('runOfflineBench with a perfect scripted engine', () => {
     expect(result.exitCode).toBe(EXIT_OK);
     expect(report.notice).toBe(OFFLINE_NOTICE);
     expect(report.engine.available).toBe(true);
-    expect(report.budgets).toEqual([2000, 4000, 8000]);
+    expect(report.budgets).toEqual([2000, 4000, 6000, 8000]);
     expect(report.tasks).toHaveLength(specs.length);
     for (const task of report.tasks) {
-      expect(task.maxify.map((run) => run.budget)).toEqual([2000, 4000, 8000]);
+      expect(task.maxify.map((run) => run.budget)).toEqual([2000, 4000, 6000, 8000]);
       for (const run of task.maxify) {
         expect(run.recallFirst, `${task.id}@${run.budget}`).toBe(1);
         expect(run.followUps).toEqual([]);

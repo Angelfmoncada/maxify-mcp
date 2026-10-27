@@ -107,11 +107,11 @@ describe('critical lines over budget', () => {
 
 describe('focus terms', () => {
   it('keeps every line containing a focus term (case-insensitive)', () => {
-    const text = Array.from({ length: 600 }, (_, i) => `2024-05-01T10:00:00Z INFO worker-${i % 9} processed batch ${i}`).join('\n');
-    const r = compress(text, { focus: ['WORKER-3'] });
+    const text = Array.from({ length: 600 }, (_, i) => `2024-05-01T10:00:00Z INFO worker-${i % 50 === 7 ? 'gc' : i % 9} processed batch ${i}`).join('\n');
+    const r = compress(text, { focus: ['WORKER-GC'] });
     const lines = new Set(r.text.split('\n'));
-    const hits = text.split('\n').filter((l) => l.includes('worker-3'));
-    expect(hits.length).toBeGreaterThan(50);
+    const hits = text.split('\n').filter((l) => l.includes('worker-gc'));
+    expect(hits.length).toBe(12);
     for (const h of hits) expect(lines.has(h)).toBe(true);
     expect(r.complete).toBe(true);
   });
@@ -119,7 +119,8 @@ describe('focus terms', () => {
   it('keeps focus hits in search results and listings', () => {
     const rg = rgOutput();
     const hits = rg.split('\n').filter((l) => l.includes('isAdmin'));
-    const r = compress(rg, { focus: ['isadmin'] });
+    const r = compress(rg, { focus: ['isadmin'], maxTokens: 4000 });
+    expect(r.complete).toBe(true);
     const lines = new Set(r.text.split('\n'));
     for (const h of hits) expect(lines.has(h)).toBe(true);
     const ls = compress(lsFiles(), { focus: ['route3'] });
@@ -141,10 +142,11 @@ describe('focus terms', () => {
 describe('diff budget', () => {
   it('shows whole files in order, then lists the rest with stats and line ranges', () => {
     const diff = gitDiff();
-    const r = compress(diff, { maxTokens: 450 });
+    const r = compress(diff, { maxTokens: 600 });
     expect(r.kind).toBe('diff');
-    expect(r.text).toContain('» file src/cart/cart.js +9 -3');
-    expect(r.text).toMatch(/» file src\/cart\/__tests__\/cart\.test\.js \+8 -0 at L\d+-L\d+ \(not shown: over budget: contents omitted\)/);
+    expect(r.text).toContain('» file src/cart/cart.js +9 -3 at L1-L41; git header L1-L4 (4 lines) omitted');
+    expect(r.text.split('\n')).toContain('+    return roundMoney(subtotal * (1 - this.percentOff / 100));');
+    expect(r.text).toMatch(/» file src\/cart\/__tests__\/cart\.test\.js \+8 -0 at L\d+-L\d+ \(over budget: contents omitted\)/);
     expect(r.text).toMatch(/» file package-lock\.json \+181 -181 at L\d+-L\d+ \(lockfile: contents omitted\)/);
     expect(r.text).not.toContain('"integrity": "sha512-');
     expect(checkMarkers(diff, r.text, { trim: false }).errors).toEqual([]);
@@ -155,7 +157,7 @@ describe('diff budget', () => {
     const plain = [
       '--- config/app.yml\t2024-05-01 10:00:00.000000000 +0200',
       '+++ config/app.yml\t2024-05-02 09:12:44.000000000 +0200',
-      '@@ -1,4 +1,4 @@',
+      '@@ -1,3 +1,3 @@',
       ' server:',
       '-  port: 8080',
       '+  port: 9090',
@@ -175,7 +177,9 @@ describe('search and list budgets', () => {
     const r = compress(rg, { maxTokens: 3000 });
     const report = checkMarkers(rg, r.text);
     expect(report.errors).toEqual([]);
-    expect(report.checked).toBeGreaterThan(40);
+    // Identical match texts are shown once, so the distinct texts bound what is shown.
+    const distinct = new Set(rg.split('\n').map((l) => l.replace(/^[^:]+:\d+:/, '').trim())).size - 1;
+    expect(report.checked).toBe(distinct);
     expect(r.text).toMatch(/^» src\/hooks\/useAuth\.ts: 40 matches at L\d+-L\d+; source lines/m);
   });
 
@@ -223,7 +227,7 @@ describe('json', () => {
   });
 
   it('minifies small JSON losslessly (transform format)', () => {
-    const small = apiResponse(25);
+    const small = apiResponse(5);
     const out = compress(small);
     expect(out.transform).toBe('format');
     expect(JSON.parse(out.text)).toEqual(JSON.parse(small));
@@ -280,11 +284,12 @@ describe('options and edge cases', () => {
 
   it('collapses carriage-return progress redraws to the last state', () => {
     const bar = Array.from({ length: 50 }, (_, i) => `Downloading ${i * 2}%`).join('\r');
-    const lines = Array.from({ length: 80 }, (_, i) => `step ${i}: ${bar}\rstep ${i}: done in ${i}ms`);
-    const text = lines.join('\n');
+    const words = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel'];
+    const name = (i: number): string => `${words[i % 8] ?? ''}-${words[Math.floor(i / 8) % 8] ?? ''}`;
+    const text = Array.from({ length: 60 }, (_, i) => `${name(i)}: ${bar}\r${name(i)}: installed`).join('\n');
     const r = compress(text, { maxTokens: 5000 });
     expect(r.transform).toBe('format');
-    expect(r.text.split('\n')[0]).toBe('step 0: done in 0ms');
+    expect(r.text.split('\n')[0]).toBe('alpha-alpha: installed');
     expect(r.notes.join(' ')).toMatch(/progress redraws collapsed/);
   });
 

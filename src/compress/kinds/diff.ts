@@ -152,43 +152,17 @@ function aggregate(c: Ctx, files: readonly DiffFile[], from: number): string[] {
   ];
 }
 
-function layout(c: Ctx, files: readonly DiffFile[], top: readonly string[], target: number): string[] {
-  const statsText = files.map((f) => renderStats(c, f, f.generated ?? 'not shown: over budget'));
-  const statsCost = statsText.map(tokens);
-  let restStats = statsCost.reduce((s, x) => s + x, 0);
-  let used = tokens(top.join('\n'));
-  let fullMode = true;
-  const parts: string[] = [];
-  files.forEach((f, j) => {
-    restStats -= statsCost[j] ?? 0;
-    if (f.generated === null && fullMode) {
-      const full = renderFile(c, f, f.hunks.length);
-      const cost = tokens(full);
-      if (used + cost + restStats <= target) {
-        parts.push(full);
-        used += cost;
-        return;
-      }
-      fullMode = false;
-      const room = target - used - restStats;
-      const partial = room >= target * PARTIAL_SHARE && f.hunks.length > 1 ? renderPartial(c, f, room) : undefined;
-      if (partial !== undefined) {
-        parts.push(partial);
-        used += tokens(partial);
-        return;
-      }
-    }
-    parts.push(statsText[j] ?? '');
-    used += statsCost[j] ?? 0;
-  });
-  if (used <= target) return [...top, ...parts];
-  // Too many files even as stats: keep stats lines while they fit, fold the rest.
-  let lo = 0;
-  let hi = parts.length;
-  let best = [...top, ...aggregate(c, files, 0)];
+/** Remaining files [from, end) as stats lines while they fit, the rest folded into one line. */
+function listing(c: Ctx, files: readonly DiffFile[], stats: readonly string[], head: readonly string[], from: number, target: number): string[] {
+  const at = (k: number): string[] => [...head, ...stats.slice(from, from + k), ...aggregate(c, files, from + k)];
+  const rest = files.length - from;
+  if (tokens(at(rest).join('\n')) <= target) return at(rest);
+  let best = at(0);
+  let lo = 1;
+  let hi = rest - 1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    const candidate = [...top, ...parts.slice(0, mid), ...aggregate(c, files, mid)];
+    const candidate = at(mid);
     if (tokens(candidate.join('\n')) <= target) {
       best = candidate;
       lo = mid + 1;
@@ -197,6 +171,48 @@ function layout(c: Ctx, files: readonly DiffFile[], top: readonly string[], targ
     }
   }
   return best;
+}
+
+/**
+ * Whole files in order (lock/generated files as stats lines) while a folded
+ * line for the rest still fits; the first file that does not fit may be shown
+ * partially; then the remaining files are listed with stats and original line
+ * ranges, folding whatever does not fit into one omission line.
+ */
+function layout(c: Ctx, files: readonly DiffFile[], top: readonly string[], target: number): string[] {
+  const stats = files.map((f) => renderStats(c, f, f.generated ?? 'over budget'));
+  const tailCost = tokens(aggregate(c, files, 0).join('\n'));
+  const parts: string[] = [];
+  let used = tokens(top.join('\n'));
+  let j = 0;
+  for (; j < files.length; j++) {
+    const f = files[j];
+    if (f === undefined) break;
+    const piece = f.generated !== null ? (stats[j] ?? '') : renderFile(c, f, f.hunks.length);
+    const cost = tokens(piece) + 1;
+    if (used + cost + tailCost <= target) {
+      parts.push(piece);
+      used += cost;
+      continue;
+    }
+    const room = target - used - tailCost;
+    if (f.generated === null && f.hunks.length > 1 && room >= target * PARTIAL_SHARE) {
+      const partial = renderPartial(c, f, room);
+      if (partial !== undefined) {
+        parts.push(partial);
+        j++;
+      }
+    }
+    break;
+  }
+  let out = listing(c, files, stats, [...top, ...parts], j, target);
+  // Token counts are not exactly additive: give back whole files until it fits.
+  while (parts.length > 0 && tokens(out.join('\n')) > target) {
+    parts.pop();
+    j--;
+    out = listing(c, files, stats, [...top, ...parts], j, target);
+  }
+  return out;
 }
 
 /** Unified diffs: per-file stats, hunks and changes verbatim, trimmed context. */

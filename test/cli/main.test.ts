@@ -86,6 +86,57 @@ describe('maxify (dispatch)', () => {
       expect(await h.run('help', 'frobnicate')).toBe(2);
       expect(h.stderr()).toContain('unknown command "frobnicate"');
     });
+
+    it('does not mistake the value of a global option for the help topic', async () => {
+      const before = harness();
+      expect(await before.run('--config', 'c.json', 'help', 'query')).toBe(0);
+      expect(before.stdout()).toContain('Usage: maxify query');
+      const after = harness();
+      expect(await after.run('help', '--config', 'c.json')).toBe(0);
+      expect(after.stdout()).toContain('Usage: maxify [global options] <command> [options]');
+    });
+
+    it('rejects an unknown option given to help', async () => {
+      const h = harness();
+      expect(await h.run('help', '--bogus')).toBe(2);
+    });
+  });
+
+  describe('--json keeps one rule: JSON on stdout only on success, plain text on stderr for every failure', () => {
+    it('usage errors', async () => {
+      const h = harness();
+      expect(await h.run('--json', 'frobnicate')).toBe(2);
+      expect(h.stdout()).toBe('');
+      expect(h.stderr()).toContain('unknown command');
+    });
+
+    it('thrown errors', async () => {
+      const h = harness({ engine: { context: async () => Promise.reject(new MaxifyError('NOT_FOUND', 'No such file.')) } });
+      expect(await h.run('--json', 'query', 'x')).toBe(1);
+      expect(h.stdout()).toBe('');
+      expect(h.stderr()).toBe('maxify: No such file.\n');
+    });
+
+    it('engine error results', async () => {
+      const h = harness({ engine: { context: async () => ({ text: 'cursor expired', isError: true, meta: { estTokens: 1, complete: false, durationMs: 0 } }) } });
+      expect(await h.run('--json', 'query', 'x')).toBe(1);
+      expect(h.stdout()).toBe('');
+      expect(h.stderr()).toBe('cursor expired\n');
+    });
+
+    it('init failures after the files were written', async () => {
+      const h = harness({ engine: { index: () => Promise.reject(new Error('locked')) } });
+      expect(await h.run('--json', 'init')).toBe(1);
+      expect(h.stdout()).toBe('');
+      expect(h.stderr()).toContain('index failed: locked');
+    });
+
+    it('success is a single JSON document', async () => {
+      const h = harness();
+      expect(await h.run('--json', 'query', 'x')).toBe(0);
+      expect(Object.keys(JSON.parse(h.stdout()) as object)).toEqual(['text', 'meta']);
+      expect(h.stderr()).toBe('');
+    });
   });
 
   describe('usage errors (exit code 2)', () => {

@@ -64,9 +64,11 @@ maxify init        # writes/merges .mcp.json (project scope) and builds the firs
 }
 ```
 
+Tool overhead (measured by `maxify stats`/`doctor`, estimated tokens): about 830 tokens upfront (instructions plus the two always-loaded tools, `maxify_context` and `maxify_source`), about 2,000 if every schema is loaded; the other four tools stay deferred until Claude searches for them.
+
 Restart Claude Code in that project and approve the project server when asked (`claude mcp list` shows it). Claude Code passes `CLAUDE_PROJECT_DIR`, which Maxify uses as the repository root. See [examples/](examples/) for a manual configuration and an optional `CLAUDE.md` snippet.
 
-The server sends Claude short instructions (about 130 tokens): call `maxify_context` first, expand with `maxify_source` when evidence is omitted or signature-only, Read the exact line range before editing, check `maxify_impact` before changing exported APIs, and pipe long command output through `maxify compress`.
+The server sends Claude short instructions (about 150 estimated tokens): call `maxify_context` first, expand with `maxify_source` when evidence is omitted or signature-only, Read the exact line range before editing, check `maxify_impact` before changing exported APIs, and pipe long command output through `maxify compress`.
 
 ### Keep raw logs out of the context
 
@@ -107,7 +109,7 @@ Optional `maxify.config.json` at the repository root:
   "respectGitignore": true,
   "maxFileBytes": 1000000,
   "extraSecretPatterns": ["deploy/keys/"],
-  "context": { "defaultBudget": 4000, "includeTests": true, "delta": false },
+  "context": { "defaultBudget": 6000, "includeTests": true, "delta": false },
   "compress": { "blobTtlDays": 7, "maxStoreMB": 200, "defaultMaxTokens": 1200 }
 }
 ```
@@ -118,7 +120,16 @@ Indexes live outside the repository, one per root (`%LOCALAPPDATA%\maxify\repos\
 
 ## Benchmarks
 
-See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for the reproducible report: offline evidence-recall and token measurements against simulated native strategies, and the agent harness (Claude Code native vs Caveman vs Graphify vs Maxify) with its current status. Token counts from Maxify itself are **local estimates**, not Claude tokenizer counts; only provider-reported usage from agent runs is exact.
+Offline suite (18 tasks on a React + Node + TypeScript fixture, local token estimates, **not agent results**):
+
+| Strategy | Tokens per task | Evidence reached |
+|---|---|---|
+| Maxify, 1 call, default budget 6000 | 5,031 | 70 % |
+| Maxify + one follow-up per missing item | 5,445 | 100 % |
+| Simulated grep + read 3 files | 5,857 | 30 % |
+| Simulated grep + read 8 line windows | 15,134 | 68 % |
+
+At budgets 2000 and 4000 the first call reaches less evidence than the 8-window strategy; the suite flags that as a regression, which is why the default is 6000. The agent benchmark (Claude Code end to end: native, Caveman, Graphify, Maxify) is built and dry-run verified but **not executed yet**, so no session-level or cost savings are claimed. Methodology, caveats and reproduction: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## Limitations
 

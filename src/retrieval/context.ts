@@ -8,6 +8,7 @@ import { findCandidates } from './candidates.js';
 import { expandCandidates } from './expand.js';
 import { Graph, type SymbolNode, type Uncertainty } from './graph.js';
 import { isPrimary, itemRef, levelRank, priority, type Item } from './items.js';
+import { isUnreached, liveFiles } from './liveness.js';
 import { demoteOne, planLevels, sortByPriority, type Level } from './plan.js';
 import { analyzeTask } from './query.js';
 import { fileHeader, itemBlock, renderContext, type NoteView } from './render.js';
@@ -83,6 +84,8 @@ export function compileContext(deps: ContextDeps, req: ContextRequest, opts: Com
   const uncertain = [...misses, ...expansion.uncertain];
   const views = new FileViews(deps.guard);
   const items = sortByPriority([...expanded.values()]).slice(0, 120);
+  const live = liveFiles(deps.store);
+  for (const item of items) if (isUnreached(item.file, live)) views.unreached.add(item.file.path);
   const costCache = new Map<string, number>();
   const cost = (item: Item, level: DetailLevel): number => {
     const key = `${item.key}|${level}`;
@@ -101,7 +104,8 @@ export function compileContext(deps: ContextDeps, req: ContextRequest, opts: Com
     detail: opts.detail,
     fixedCost,
     cost,
-    fileHeaderCost: (file) => (file.status === 'indexed' ? estimateTokens(fileHeader(file, views.view(file))) + 2 : FILE_HEADER_FALLBACK),
+    fileHeaderCost: (file) =>
+      file.status === 'indexed' ? estimateTokens(fileHeader(file, views.view(file), views.unreached.has(file.path))) + 2 : FILE_HEADER_FALLBACK,
   });
   if (views.stale.size > 0) return staleResult(views);
   return finalize(req, opts, items, plan.levels, uncertain, notes, views, cost);
@@ -136,6 +140,7 @@ function baseRender(
     cursor,
     sentBefore: opts.sentBefore,
     view: (file) => views.view(file) ?? { hash: file.hash, lines: [], crlf: false },
+    unreached: views.unreached,
     sourceTokens,
   };
 }

@@ -1,9 +1,21 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MaxifyError } from '../../src/core/errors.js';
 import {
+  MAX_CONFIG_BYTES,
   buildServerEntry,
   entryScriptPath,
   mcpServerEntryOf,
@@ -150,6 +162,66 @@ describe('file helpers', () => {
     writeFileSync(file, '{oops');
     const bad = readJsonFile(file);
     expect(bad.kind).toBe('invalid-json');
+  });
+
+  describe('readJsonFile refuses what a hostile project could use against the user', () => {
+    it('does not follow links (a link to a secret file must not be read, then copied by a rewrite)', () => {
+      const secret = path.join(dir, 'secret-dir');
+      mkdirSync(secret);
+      const file = path.join(dir, '.mcp.json');
+      try {
+        symlinkSync(secret, file, 'junction');
+      } catch {
+        return; // This machine does not allow creating links.
+      }
+      const result = readJsonFile(file);
+      expect(result.kind).toBe('unsafe');
+      if (result.kind === 'unsafe') expect(result.message).toContain('symbolic link');
+    });
+
+    it('refuses directories and other non-regular files', () => {
+      const file = path.join(dir, 'a-directory');
+      mkdirSync(file);
+      const result = readJsonFile(file);
+      expect(result.kind).toBe('unsafe');
+      if (result.kind === 'unsafe') expect(result.message).toContain('not a regular file');
+    });
+
+    it('refuses files that are too large to be a config file', () => {
+      const file = path.join(dir, 'big.json');
+      writeFileSync(file, `{"pad":"${'x'.repeat(MAX_CONFIG_BYTES)}"}`);
+      const result = readJsonFile(file);
+      expect(result.kind).toBe('unsafe');
+      if (result.kind === 'unsafe') expect(result.message).toContain('larger than 1024 KiB');
+    });
+
+    it('reads a file just under the limit', () => {
+      const file = path.join(dir, 'ok.json');
+      writeFileSync(file, `{"pad":"${'x'.repeat(MAX_CONFIG_BYTES - 20)}"}`);
+      expect(readJsonFile(file).kind).toBe('ok');
+    });
+  });
+
+  describe('readJsonFile understands files saved by Windows tools', () => {
+    it('strips a UTF-8 byte-order mark (Notepad, PowerShell 5 Out-File)', () => {
+      const file = path.join(dir, 'bom.json');
+      writeFileSync(file, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('{"a":1}')]));
+      expect(readJsonFile(file)).toEqual({ kind: 'ok', value: { a: 1 } });
+    });
+
+    it('decodes UTF-16 with a BOM (PowerShell redirection)', () => {
+      const file = path.join(dir, 'utf16.json');
+      writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('{"a":"é"}', 'utf16le')]));
+      expect(readJsonFile(file)).toEqual({ kind: 'ok', value: { a: 'é' } });
+    });
+  });
+
+  it.skipIf(process.platform === 'win32')('writeJsonFile keeps the permissions of the file it replaces', () => {
+    const file = path.join(dir, '.mcp.json');
+    writeFileSync(file, '{}', { mode: 0o600 });
+    chmodSync(file, 0o600);
+    writeJsonFile(file, { a: 1 });
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   it('writeJsonFile writes 2-space JSON with a trailing newline and leaves no temp file', () => {

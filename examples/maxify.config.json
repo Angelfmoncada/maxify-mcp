@@ -4,7 +4,7 @@
   "maxFileBytes": 1000000,
   "extraSecretPatterns": [],
   "context": {
-    "defaultBudget": 4000,
+    "defaultBudget": 6000,
     "includeTests": true,
     "delta": false
   },

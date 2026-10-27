@@ -1,14 +1,35 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   checkNode,
+  formatCheck,
   indexedFileCount,
   isVersionAtLeast,
+  readIndexHealth,
 } from '../../src/cli/doctorChecks.js';
 import { okOutput } from '../mcp/helpers.js';
 import { createHarness, createTempProject, type Harness, type TempProject } from './helpers.js';
+
+/** What the real engine prints for `maxify_stats {scope: 'index'}` (src/engine/stats.ts). */
+function statsText(index: { generation: number; lastIndex: string; files: string }): string {
+  return [
+    'maxify_stats \u00b7 scope index',
+    '',
+    '## index',
+    'root: /repo',
+    'state: /state',
+    `generation ${index.generation} \u00b7 last index ${index.lastIndex} (812 ms)`,
+    `files: ${index.files}`,
+    'symbols: function 40, class 3',
+    '',
+    '## limitations',
+    '- Token counts are local heuristic estimates.',
+  ].join('\n');
+}
+
+const HEALTHY_STATS = statsText({ generation: 3, lastIndex: '2026-10-26T10:00:00.000Z', files: 'ok 120, skipped 3' });
 
 describe('maxify doctor', () => {
   let project: TempProject;
@@ -33,7 +54,7 @@ describe('maxify doctor', () => {
     createHarness({
       cwd: project.dir,
       cliPath,
-      engine: { stats: async () => okOutput('index: 12 files', { meta: { estTokens: 4, complete: true, durationMs: 1, files: 12 } }) },
+      engine: { stats: async () => okOutput(HEALTHY_STATS) },
       ...options,
     });
   const doctor = (h: Harness, ...extra: string[]): Promise<number> => h.run('doctor', '--state-dir', stateDir, ...extra);
@@ -49,7 +70,7 @@ describe('maxify doctor', () => {
     expect(lineFor(h, 'Repository root')).toContain(project.dir);
     expect(lineFor(h, 'State directory')).toMatch(/^PASS/);
     expect(lineFor(h, 'Config')).toMatch(/^PASS {2}Config: no maxify\.config\.json; defaults in use/);
-    expect(lineFor(h, 'Index')).toBe('PASS  Index: 12 files indexed');
+    expect(lineFor(h, 'Index')).toBe('PASS  Index: files ok 120, skipped 3; generation 3, last index 2026-10-26T10:00:00.000Z');
     expect(lineFor(h, '.mcp.json')).toContain(`maxify entry points to ${cliPath}`);
     expect(lineFor(h, 'MCP self-test')).toMatch(/^PASS {2}MCP self-test: 6 tools listed \(3 ms\)/);
     expect(lineFor(h, 'Tool surface')).toMatch(/^PASS {2}Tool surface: tool surface: ~\d+ est\. tokens/);
@@ -156,6 +177,13 @@ describe('maxify doctor', () => {
       expect(lineFor(h, '.mcp.json')).toMatch(/^FAIL {2}\.mcp\.json: .* is not valid JSON/);
     });
 
+    it('FAIL when .mcp.json is far too large to be a config file', async () => {
+      writeFileSync(path.join(project.dir, '.mcp.json'), `{"pad":"${'x'.repeat(1024 * 1024)}"}`);
+      const h = harness();
+      expect(await doctor(h)).toBe(1);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^FAIL {2}\.mcp\.json: .* is larger than 1024 KiB/);
+    });
+
     it('FAIL on an unsafe root, and skips the checks that need one', async () => {
       const h = harness();
       expect(await h.run('doctor', '--root', homedir())).toBe(1);
@@ -195,17 +223,88 @@ describe('maxify doctor', () => {
       register({ type: 'stdio', command: 'npx', args: ['maxify-mcp', 'serve'] });
       const h = harness();
       expect(await doctor(h)).toBe(0);
-      expect(lineFor(h, '.mcp.json')).toMatch(/^WARN/);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^WARN {2}\.mcp\.json: maxify entry does not run node/);
     });
 
-    it('WARN when the index is empty', async () => {
-      register();
-      const h = harness({ engine: { stats: async () => okOutput('empty', { meta: { estTokens: 1, complete: true, durationMs: 1, files: 0 } }) } });
+    it('does not vouch for an entry that runs something other than node, whatever files exist', async () => {
+      register({ type: 'stdio', command: 'sh', args: ['-c', 'echo hi', cliPath, 'serve'] });
+      const h = harness();
       expect(await doctor(h)).toBe(0);
-      expect(lineFor(h, 'Index')).toBe('WARN  Index: empty; run "maxify index"');
+      expect(lineFor(h, '.mcp.json')).toMatch(/^WARN {2}\.mcp\.json: maxify entry does not run node \(command "sh"\)/);
     });
 
-    it('shows the first line of the report when the engine gives no file count', async () => {
+    it('recognizes node given as an absolute Windows path', async () => {
+      register({ type: 'stdio', command: 'C:\\Program Files\\nodejs\\node.exe', args: [cliPath, 'serve'] });
+      const h = harness();
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^PASS/);
+    });
+
+    it('WARN when the entry runs the script without its serve command', async () => {
+      register({ type: 'stdio', command: 'node', args: [cliPath, 'doctor'] });
+      const h = harness();
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, '.mcp.json')).toContain('but not its "serve" command');
+    });
+
+    it('does not touch network paths named by the repository', async () => {
+      register({ type: 'stdio', command: 'node', args: ['\\\\evil-host\\share\\cli.js', 'serve'] });
+      const h = harness();
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^WARN {2}\.mcp\.json: maxify entry runs a script on a network path/);
+      register({ type: 'stdio', command: 'node', args: ['//evil-host/share/cli.js', 'serve'] });
+      const second = harness();
+      await doctor(second);
+      expect(lineFor(second, '.mcp.json')).toMatch(/^WARN .*network path/);
+    });
+
+    it('makes control characters from the repository visible instead of passing them to the terminal', async () => {
+      register({ type: 'stdio', command: 'node', args: [path.join(project.dir, 'x\u001b[2Jcli.js'), 'serve'] });
+      const h = harness();
+      expect(await doctor(h)).toBe(1);
+      const escape = String.fromCharCode(27);
+      expect(h.stdout()).not.toContain(escape);
+      expect(h.stdout()).toContain('\\x1b[2Jcli.js');
+    });
+
+    it('accepts a .mcp.json saved with a byte-order mark (Notepad, PowerShell)', async () => {
+      const content = JSON.stringify({ mcpServers: { maxify: { type: 'stdio', command: 'node', args: [cliPath, 'serve'] } } });
+      writeFileSync(path.join(project.dir, '.mcp.json'), Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(content)]));
+      const h = harness();
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^PASS/);
+    });
+
+    it('FAIL (not follow) when .mcp.json is a link', async () => {
+      const target = path.join(project.dir, 'elsewhere');
+      mkdirSync(target);
+      try {
+        // A directory link: creatable without special privileges on Windows, and reported as a symlink.
+        symlinkSync(target, path.join(project.dir, '.mcp.json'), 'junction');
+      } catch {
+        return; // This machine does not allow creating links at all.
+      }
+      const h = harness();
+      expect(await doctor(h)).toBe(1);
+      expect(lineFor(h, '.mcp.json')).toMatch(/^FAIL {2}\.mcp\.json: .* is a symbolic link/);
+    });
+
+    it('WARN when nothing is indexed yet', async () => {
+      register();
+      const never = statsText({ generation: 0, lastIndex: 'never', files: 'none' });
+      const h = harness({ engine: { stats: async () => okOutput(never) } });
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, 'Index')).toBe('WARN  Index: nothing indexed yet; run "maxify index"');
+    });
+
+    it('WARN when the engine reports zero files in meta', async () => {
+      register();
+      const h = harness({ engine: { stats: async () => okOutput('anything', { meta: { estTokens: 1, complete: true, durationMs: 1, files: 0 } }) } });
+      expect(await doctor(h)).toBe(0);
+      expect(lineFor(h, 'Index')).toBe('WARN  Index: nothing indexed yet; run "maxify index"');
+    });
+
+    it('shows the first line of the report when it has no recognizable index section', async () => {
       register();
       const h = harness({ engine: { stats: async () => okOutput('\nindex ready, generation 3\nmore') } });
       expect(await doctor(h)).toBe(0);
@@ -275,5 +374,39 @@ describe('doctor check helpers', () => {
     expect(indexedFileCount({ indexedFiles: 0 })).toBe(0);
     expect(indexedFileCount({ files: 'many' })).toBeUndefined();
     expect(indexedFileCount({})).toBeUndefined();
+  });
+
+  describe('readIndexHealth parses what the real engine prints', () => {
+    const meta = { estTokens: 1, complete: true, durationMs: 1 };
+
+    it('sums the per-status file counts', () => {
+      const health = readIndexHealth({ text: HEALTHY_STATS, meta });
+      expect(health.files).toBe(123);
+      expect(health.neverIndexed).toBe(false);
+      expect(health.summary).toBe('files ok 120, skipped 3; generation 3, last index 2026-10-26T10:00:00.000Z');
+    });
+
+    it('recognizes an index that was never built', () => {
+      const health = readIndexHealth({ text: statsText({ generation: 0, lastIndex: 'never', files: 'none' }), meta });
+      expect(health.files).toBe(0);
+      expect(health.neverIndexed).toBe(true);
+    });
+
+    it('prefers a numeric meta.files over parsing text', () => {
+      expect(readIndexHealth({ text: HEALTHY_STATS, meta: { ...meta, files: 7 } }).files).toBe(7);
+    });
+
+    it('copes with text it does not recognize', () => {
+      const health = readIndexHealth({ text: 'something else entirely', meta });
+      expect(health.files).toBeUndefined();
+      expect(health.neverIndexed).toBe(false);
+      expect(health.summary).toBe('something else entirely');
+      expect(readIndexHealth({ text: '', meta }).summary).toBe('readable');
+    });
+  });
+
+  it('formatCheck renders control characters visibly', () => {
+    const line = formatCheck({ status: 'FAIL', name: 'x', detail: `bad\u0007name\u001b[0m` });
+    expect(line).toBe('FAIL  x: bad\\x07name\\x1b[0m');
   });
 });

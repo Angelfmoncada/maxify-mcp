@@ -6,8 +6,9 @@ import type { CompressKind } from './types.js';
 export const JSON_MAX_CHARS = 5 * 1024 * 1024;
 const SAMPLE_CHARS = 64 * 1024;
 
-const SEARCH_MATCH = /^(?:[A-Za-z]:[\\/])?[^\s:]+:\d+[:-]/;
-const SEARCH_CONTEXT = /^(?:[A-Za-z]:[\\/])?[^\s:]*[./\\][^\s:]*-\d+-/;
+/** path:line: — the path must contain a letter and must not be a timestamp ("2024-05-01T10:00:02Z"). */
+const SEARCH_MATCH = /^(?:[A-Za-z]:[\\/])?(?!\d{4}-\d{2}-\d{2})(?=[^\s:]*[A-Za-z])[^\s:]+:\d+[:-]/;
+const SEARCH_CONTEXT = /^(?:[A-Za-z]:[\\/])?(?!\d{4}-\d{2}-\d{2})[^\s:]*[./\\][^\s:]*-\d+-/;
 const DIAGNOSTIC = /:\d+:\d+:?\s+(?:fatal\s+)?(?:error|warning|note)\b/i;
 const PATH_NO_SPACE = /^(?:[A-Za-z]:)?[^\s:*?"<>|=]+$/;
 const PATH_SPACED = /^(?:[A-Za-z]:)?[^:*?"<>|=]*[\\/][^:*?"<>|=]*$/;

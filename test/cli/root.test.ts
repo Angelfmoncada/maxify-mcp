@@ -1,7 +1,7 @@
+import { existsSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveRoot } from '../../src/cli/root.js';
 import { MaxifyError } from '../../src/core/errors.js';
 import { createHarness, createTempProject, type TempProject } from './helpers.js';
@@ -82,6 +82,65 @@ describe('root resolution', () => {
       expect(h.stderr()).toContain('Refusing to use');
       expect(h.opened).toHaveLength(0);
     }
+  });
+
+  describe('canonical safety checks (links cannot smuggle in the home directory)', () => {
+    // A fake home keeps these tests away from the real one even if the guard were broken.
+    let fakeHome: TempProject;
+    beforeEach(() => {
+      fakeHome = createTempProject();
+      vi.stubEnv('USERPROFILE', fakeHome.dir);
+      vi.stubEnv('HOME', fakeHome.dir);
+    });
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      fakeHome.cleanup();
+    });
+
+    const link = (target: string, name: string): string | undefined => {
+      const where = path.join(project.dir, name);
+      try {
+        symlinkSync(target, where, 'junction');
+        return where;
+      } catch {
+        return undefined; // Creating links is not permitted on this machine.
+      }
+    };
+
+    it('refuses the home directory itself', async () => {
+      const h = createHarness({ cwd: project.dir });
+      expect(await h.run('query', 'x', '--root', fakeHome.dir)).toBe(1);
+      expect(h.stderr()).toContain('Refusing to use');
+    });
+
+    it('refuses a link that points at the home directory, before anything is written', async () => {
+      const where = link(fakeHome.dir, 'looks-harmless');
+      if (where === undefined) return;
+      const h = createHarness({ cwd: project.dir });
+      expect(await h.run('init', '--root', where, '--write-config')).toBe(1);
+      expect(h.stderr()).toContain('Refusing to use');
+      expect(h.opened).toHaveLength(0);
+      expect(existsSync(path.join(fakeHome.dir, '.mcp.json'))).toBe(false);
+      expect(existsSync(path.join(fakeHome.dir, 'maxify.config.json'))).toBe(false);
+    });
+
+    it('compares against the canonical home when HOME itself is a link', async () => {
+      const homeLink = link(fakeHome.dir, 'home-link');
+      if (homeLink === undefined) return;
+      vi.stubEnv('USERPROFILE', homeLink);
+      vi.stubEnv('HOME', homeLink);
+      const h = createHarness({ cwd: project.dir });
+      expect(await h.run('query', 'x', '--root', fakeHome.dir)).toBe(1);
+      expect(h.stderr()).toContain('Refusing to use');
+    });
+
+    it('refuses a link to the home directory from the environment, too', async () => {
+      const where = link(fakeHome.dir, 'env-link');
+      if (where === undefined) return;
+      const h = createHarness({ cwd: project.dir, env: { CLAUDE_PROJECT_DIR: where } });
+      expect(await h.run('query', 'x')).toBe(1);
+      expect(h.stderr()).toContain('Refusing to use');
+    });
   });
 
   it('refuses an unsafe root coming from the environment too', async () => {

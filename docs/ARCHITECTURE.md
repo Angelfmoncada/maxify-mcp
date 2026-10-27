@@ -57,10 +57,10 @@ Cross-file edges are stored as (import, exported name) and resolved at query tim
 ## Context compiler (`maxify_context`)
 
 1. **Analyze** the task: identifiers and paths are matched exactly; prose words by light stemming and prefix; English and Spanish stopwords are dropped.
-2. **Search** FTS5 for candidates and score them with field-weighted BM25-style scoring computed in Maxify (robust on small repositories), plus exact-identifier and path bonuses and intent weights (tests, docs, config).
+2. **Search** FTS5 for candidates and score them with field-weighted BM25-style scoring computed in Maxify (robust on small repositories), plus exact-identifier and path bonuses and intent weights (tests, docs, config). Symbols matched only through their file path keep 30 % of their score. Code files that no test or entry point reaches through resolved imports (often dead or legacy code) keep 50 % and are flagged `UNREACHED` in the output; they are never hidden.
 3. **Expand** the strongest candidates one hop: callees and contract types (what the code depends on), callers, tests, enclosing class; a second hop adds contract types of the strongest callees.
 4. **Deduplicate**: one item per symbol; items contained in another item shown as source are not repeated.
-5. **Plan detail levels** greedily by priority: exact source for primaries, then contracts, then tests/callers as locations, then upgrades with what remains. An item is rendered whole at a level or omitted, never cut.
+5. **Plan detail levels** greedily by priority: exact source for primaries, then contracts, then tests/callers as locations, then upgrades with what remains, only for items above 20 % of the top priority. The budget (default 6000) is a ceiling, not a target. An item is rendered whole at a level or omitted, never cut.
 6. **Verify and render**: every file shown is re-read and its hash compared with the index (re-index and retry on mismatch); the rendered text is re-measured and demoted until it fits the budget and the 45,000-character cap.
 
 Output levels: `[src]` exact current source, `[sig]` derived signature (labelled as not source), `[map]` location only. Every result states the generation, the content hash of each file, uncertainties, omitted refs with their source cost, and a cursor when more evidence is available.
@@ -84,6 +84,6 @@ Output levels: `[src]` exact current source, `[sig]` derived signature (labelled
 ## Security model
 
 - Everything is local; no telemetry. Metrics stay in the state database.
-- All paths pass through `RepoGuard` (no `..` escapes, no symlink escapes, no NUL bytes); secret and ignored files are refused by `maxify_source`; secrets are refused by `maxify_compress`.
+- All paths pass through `RepoGuard` (no `..` escapes, no symlink escapes, no NUL bytes; on Windows also no alternate data streams, 8.3 short names, trailing dots/spaces or device names). Every on-request read goes through one reader that classifies both the requested path and its real path (so an in-repo link to `.env` is refused), requires a regular file under 20 MB, and refuses binary content and PEM private keys. Secret and ignored files are refused by `maxify_source` and `maxify_compress`; ignored logs can still be compressed by piping them into the CLI.
 - Retrieved code, docs and logs are data: they are fenced with collision-proof fences and the server instructions say so. Maxify executes no shell commands.
 - Refusing unsafe roots (filesystem root, home directory) prevents indexing a whole disk by mistake.

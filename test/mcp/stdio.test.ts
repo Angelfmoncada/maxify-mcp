@@ -142,6 +142,24 @@ describe('serveStdio', () => {
     expect(harness.exit).toHaveBeenCalledWith(0);
   });
 
+  it('closes the engine and exits inside the stdin end event itself, with no await in between', async () => {
+    // Claude Code may kill the process tree ~300 ms after closing stdin (Windows): nothing may be deferred.
+    const fake = createFakeEngine();
+    handle = await start(fake.engine);
+    harness.stdin.emit('end');
+    expect(fake.engine.close).toHaveBeenCalledTimes(1);
+    expect(harness.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('exits with a failure code when the transport dies from a framing error (oversized message)', async () => {
+    const fake = createFakeEngine();
+    handle = await start(fake.engine);
+    harness.stdin.write('x'.repeat(11 * 1024 * 1024));
+    await vi.waitFor(() => expect(harness.exit).toHaveBeenCalledWith(1));
+    expect(fake.engine.close).toHaveBeenCalledTimes(1);
+    expect(stderrText(stderr)).toContain('transport error');
+  });
+
   it.each(['SIGINT', 'SIGTERM'])('shuts down once on %s', async (signal) => {
     const fake = createFakeEngine();
     handle = await start(fake.engine);

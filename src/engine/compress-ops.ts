@@ -1,4 +1,3 @@
-import { readFileSync, statSync } from 'node:fs';
 import { compress } from '../compress/index.js';
 import type { MaxifyConfig } from '../config/config.js';
 import { MaxifyError } from '../core/errors.js';
@@ -7,6 +6,7 @@ import { sha256 } from '../core/hash.js';
 import type { RepoGuard } from '../core/paths.js';
 import { estimateTokens } from '../core/tokens.js';
 import type { Exclusions } from '../indexer/exclusions.js';
+import { readRepoText } from '../indexer/safe-read.js';
 import { parseLineRange } from '../retrieval/refs.js';
 import type { AuxStore } from '../store/aux-store.js';
 import { MAX_BUDGET, type CompressRequest } from './types.js';
@@ -36,20 +36,9 @@ function readInput(deps: CompressDeps, req: CompressRequest): { text: string; so
     return { text: req.text, source: 'text' };
   }
   const rel = deps.guard.resolve(req.path as string);
-  if (deps.exclusions.classifyWithAncestors(rel) === 'secret') {
-    throw new MaxifyError('EXCLUDED', `${rel} matches a secret-file pattern; Maxify never reads it.`);
-  }
-  const abs = deps.guard.abs(rel);
-  let size: number;
-  try {
-    size = statSync(abs).size;
-  } catch {
-    throw new MaxifyError('NOT_FOUND', `${rel} does not exist.`);
-  }
-  if (size > MAX_INPUT_BYTES) throw new MaxifyError('INVALID_INPUT', `${rel} exceeds 20 MB`);
-  const buffer = readFileSync(abs);
-  if (buffer.subarray(0, 8192).includes(0)) throw new MaxifyError('INVALID_INPUT', `${rel} looks binary`);
-  return { text: buffer.toString('utf8'), source: `path:${rel}` };
+  const hint = ' For ignored logs, pipe the command output into the CLI instead: <cmd> 2>&1 | maxify compress';
+  const { text } = readRepoText(deps.guard, deps.exclusions, rel, hint);
+  return { text, source: `path:${rel}` };
 }
 
 function splitLines(text: string): string[] {
@@ -109,6 +98,7 @@ export function compressOp(deps: CompressDeps, req: CompressRequest): CompressOp
   const stored = result.transform !== 'none';
   if (stored) {
     deps.aux.putBlob({ hash, kind: result.kind, text, size: Buffer.byteLength(text, 'utf8'), lines: result.stats.originalLines, source, expiresAt, now });
+    deps.aux.evictBlobs(now, deps.config.compress.maxStoreMB * 1024 * 1024);
   }
   const status = result.complete ? 'every critical line kept verbatim' : 'INCOMPLETE: some critical lines did not fit (listed below)';
   const where = stored

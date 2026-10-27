@@ -6,7 +6,7 @@
 import type { CompressKindInput } from '../compress/types.js';
 import type { Provenance } from '../core/types.js';
 
-export const DEFAULT_CONTEXT_BUDGET = 4000;
+export const DEFAULT_CONTEXT_BUDGET = 6000;
 export const MIN_BUDGET = 300;
 /** Claude Code saves results over 50,000 characters to a file instead of showing them; stay well below. */
 export const MAX_BUDGET = 12_000;

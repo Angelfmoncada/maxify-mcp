@@ -13,6 +13,8 @@ export class FileViews {
   private readonly cache = new Map<string, FileView | null>();
   /** Paths whose on-disk content no longer matches the index. */
   readonly stale = new Set<string>();
+  /** Code files no test or entry point reaches (flagged when rendered). */
+  readonly unreached = new Set<string>();
 
   constructor(guard: RepoGuard) {
     this.guard = guard;

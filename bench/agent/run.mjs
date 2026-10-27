@@ -4,7 +4,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { UsageError, parseArgs } from './lib/args.mjs';
-import { BUILTIN_TOOLS, buildClaudeArgs, claudeVersion, killTree } from './lib/claude.mjs';
+import { BUILTIN_TOOLS, buildClaudeArgs, claudeCommand, claudeVersion, killTree } from './lib/claude.mjs';
 import { ALL_CONDITIONS, CAVEMAN_CONDITIONS, CONDITION_FEATURES, describeCondition, detectFeatures } from './lib/conditions.mjs';
 import { executeRun } from './lib/execute.mjs';
 import { DEFAULT_MAX_BUDGET_USD, DEFAULT_MAX_TOTAL_USD, buildPlan, renderPlan } from './lib/plan.mjs';
@@ -141,6 +141,13 @@ async function main(argv) {
     maxBudgetUsd: o['max-budget-usd'],
     maxTotalUsd: o['max-total-usd'],
   });
+  let overridden;
+  try {
+    overridden = claudeCommand().overridden;
+  } catch (error) {
+    return fail(errorMessage(error));
+  }
+  if (overridden) process.stderr.write('WARNING: MAXIFY_BENCH_CLAUDE is set. A stand-in is used instead of the real Claude Code (test hook).\n');
   const claude = claudeVersion();
   const firstJob = plan.jobs[0];
   const exampleArgs = firstJob === undefined ? undefined : buildClaudeArgs({
@@ -169,7 +176,8 @@ async function main(argv) {
 async function execute(plan, o, features, conditionNames, claude) {
   const runId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${shortId(3)}`;
   const outFile = path.resolve(o.out ?? path.join(RESULTS_DIR, `agent-${runId}.jsonl`));
-  const runDir = path.join(RESULTS_DIR, runId);
+  // Per-run artifacts live next to the results file, so --out keeps everything in one place.
+  const runDir = path.join(path.dirname(outFile), runId);
   mkdirSync(runDir, { recursive: true });
   const versions = collectVersions(conditionNames, features, claude);
   const options = { model: o.model, effort: o.effort, maxBudgetUsd: o['max-budget-usd'], cavemanLoad: o['caveman-load'] };

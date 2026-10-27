@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -37,14 +37,43 @@ describe('resolveCliCommand', () => {
   });
 
   it.each([
+    'C:/Users/Ángel Moncada/OneDrive/Escritorio/Maxify/dist/cli.js',
+    '/home/user/.nvm/versions/node/v22.22.1/lib/node_modules/maxify-mcp/dist/cli.js',
+    '/opt/my_tool-2/app (copy)/dist/cli.js',
+    '/Users/me/dev@home/maxify+extras/~scratch/cli.js',
+    'D:/\u4e2d\u6587/\u0440\u0443\u0441\u0441\u043a\u0438\u0439/cli.js',
+  ])('quotes ordinary paths, including accents, spaces and other scripts: %s', (cliPath) => {
+    expect(resolveCliCommand({}, cliPath, 'linux')).toBe(`node "${cliPath}"`);
+  });
+
+  it.each([
     '/opt/a$(id)/cli.js',
     '/opt/a"b/cli.js',
     '/opt/a`id`/cli.js',
     '/opt/a!b/cli.js',
     '/opt/a\nb/cli.js',
     '/opt/a\rb/cli.js',
-  ])('never embeds a path that cannot be double-quoted safely: %j', (unsafe) => {
+    "/opt/it's/cli.js",
+    '/opt/100%/cli.js',
+    '/opt/%USERPROFILE%/cli.js',
+    '/opt/a&b/cli.js',
+    '/opt/a;b/cli.js',
+    '/opt/a|b/cli.js',
+    '/opt/a^b/cli.js',
+    '/opt/a<b>/cli.js',
+    '/opt/a\u201dcurly/cli.js',
+    '/opt/a\u201ccurly/cli.js',
+    '/opt/a\u201ecurly/cli.js',
+    '/opt/a{b}/cli.js',
+    '/opt/a*b/cli.js',
+    '/opt/a#b/cli.js',
+  ])('only embeds paths from a conservative allow-list, so no shell can reinterpret them: %j', (unsafe) => {
     expect(resolveCliCommand({}, unsafe, 'linux')).toBe('maxify');
+  });
+
+  it('does not take a directory named maxify on PATH for the launcher', () => {
+    mkdirSync(path.join(dir, 'maxify'));
+    expect(isMaxifyOnPath({ PATH: dir }, 'linux')).toBe(false);
   });
 
   it('copes with an empty or missing PATH', () => {

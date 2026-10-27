@@ -63,6 +63,10 @@ export function walkRepository(guard: RepoGuard, exclusions: Exclusions): WalkRe
         skipped.ignored++;
         continue;
       }
+      if (entry.isSymbolicLink() && symlinkTargetExcluded(guard, exclusions, rel)) {
+        skipped.secret++;
+        continue;
+      }
       const walked = statEntry(guard, rel, entry.isSymbolicLink(), cls === 'noise');
       if (walked === 'outside') skipped.symlinkOutside++;
       else if (walked === null) skipped.unreadable++;
@@ -71,6 +75,19 @@ export function walkRepository(guard: RepoGuard, exclusions: Exclusions): WalkRe
   }
   files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   return { files, skipped };
+}
+
+/** A link whose real target is secret or ignored (e.g. docs/notes.txt -> ../.env) must not expose that target. */
+function symlinkTargetExcluded(guard: RepoGuard, exclusions: Exclusions, rel: string): boolean {
+  let real: string | null;
+  try {
+    real = guard.realRel(rel);
+  } catch {
+    return true;
+  }
+  if (real === null || real === rel) return false;
+  const cls = exclusions.classifyWithAncestors(real);
+  return cls === 'secret' || cls === 'ignored';
 }
 
 function statEntry(guard: RepoGuard, rel: string, isLink: boolean, noise: boolean): WalkedFile | 'outside' | null {

@@ -251,6 +251,24 @@ export class IndexStore {
     ).map((row) => ({ ...toImportRow(row), path: String(row.path) }));
   }
 
+  /** Every resolved import edge as (importing file, imported file). */
+  resolvedEdges(): Array<{ from: string; to: string }> {
+    return this.all(
+      "SELECT DISTINCT f.path AS src, i.resolved_path AS dst FROM imports i JOIN files f ON f.id = i.file_id WHERE i.resolution = 'resolved' AND i.resolved_path IS NOT NULL",
+    ).map((row) => ({ from: String(row.src), to: String(row.dst) }));
+  }
+
+  /** Number of distinct importing files per resolved target path. */
+  importerCounts(): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const row of this.all(
+      "SELECT resolved_path AS path, count(DISTINCT file_id) AS n FROM imports WHERE resolution = 'resolved' AND resolved_path IS NOT NULL GROUP BY resolved_path",
+    )) {
+      out.set(String(row.path), Number(row.n));
+    }
+    return out;
+  }
+
   countImportsByResolution(): Record<string, number> {
     const out: Record<string, number> = {};
     for (const row of this.all('SELECT resolution, count(*) AS n FROM imports GROUP BY resolution')) out[String(row.resolution)] = Number(row.n);

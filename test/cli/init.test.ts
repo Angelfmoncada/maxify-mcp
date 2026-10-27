@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, loadConfig } from '../../src/config/config.js';
@@ -176,11 +176,53 @@ describe('maxify init', () => {
     expect(payload.text).toContain('created .mcp.json');
   });
 
-  it('does not touch the home directory or global Claude settings', async () => {
+  it('creates nothing but the files it reports, and leaves no temp files behind', async () => {
     const h = harness();
-    await h.run('init');
-    const touched = [h.stdout(), h.stderr()].join('');
-    expect(touched).not.toContain('.claude.json');
+    expect(await h.run('init', '--write-config')).toBe(0);
+    expect(readdirSync(project.dir).sort()).toEqual(['.git', '.mcp.json', 'maxify.config.json']);
+  });
+
+  it('only ever writes inside the project root', async () => {
+    const outside = createTempProject();
+    try {
+      const h = harness({ cwd: outside.dir });
+      expect(await h.run('init', '--root', project.dir, '--write-config')).toBe(0);
+      expect(readdirSync(outside.dir)).toEqual(['.git']);
+      expect(existsSync(path.join(project.dir, '.mcp.json'))).toBe(true);
+    } finally {
+      outside.cleanup();
+    }
+  });
+
+  it('refuses a .mcp.json that is a link, instead of reading its target and writing it back as a regular file', async () => {
+    const secret = path.join(project.dir, 'secret-dir');
+    mkdirSync(secret);
+    try {
+      symlinkSync(secret, mcpFile(), 'junction');
+    } catch {
+      return; // This machine does not allow creating links.
+    }
+    const h = harness();
+    expect(await h.run('init')).toBe(1);
+    expect(h.stderr()).toContain('is a symbolic link');
+    expect(h.opened).toHaveLength(0);
+    expect(lstatSync(mcpFile()).isSymbolicLink()).toBe(true);
+  });
+
+  it('refuses an oversized .mcp.json', async () => {
+    writeFileSync(mcpFile(), `{"pad":"${'x'.repeat(1024 * 1024)}"}`);
+    const h = harness();
+    expect(await h.run('init')).toBe(1);
+    expect(h.stderr()).toContain('larger than 1024 KiB');
+  });
+
+  it('merges into a .mcp.json saved with a byte-order mark and writes it back without one', async () => {
+    const content = JSON.stringify({ mcpServers: { docs: { type: 'http', url: 'u' } } });
+    writeFileSync(mcpFile(), Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(content)]));
+    const h = harness();
+    expect(await h.run('init')).toBe(0);
+    expect(Object.keys((readMcp() as { mcpServers: object }).mcpServers)).toEqual(['docs', 'maxify']);
+    expect(readFileSync(mcpFile())[0]).toBe(0x7b);
   });
 
   it('rejects stray arguments', async () => {

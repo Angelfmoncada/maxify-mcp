@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_BENCH_NOTICE } from '../../src/cli/commands/bench.js';
 import { formatIndexSummary } from '../../src/cli/commands/indexCmd.js';
@@ -133,19 +134,28 @@ describe('engine-backed commands', () => {
       expect((h.fake.calls[0]?.request as { origin: string }).origin).toBe('agent');
     });
 
-    it('does not add an implicit origin to other operations (it could act as a filter)', async () => {
+    it('records the user as the last writer on add and update, and sends no origin on reads or deletes', async () => {
       const h = harness();
       await h.run('memory', 'list', '--limit', '10');
       await h.run('memory', 'search', '--query', 'jose');
       await h.run('memory', 'get', '--id', 'n1');
       await h.run('memory', 'delete', '--id', 'n1');
       await h.run('memory', 'update', '--id', 'n1', '--text', 'new text');
+      await h.run('memory', 'update', '--id', 'n1', '--text', 'scripted', '--origin', 'agent');
       const requests = h.fake.calls.map((call) => call.request);
       expect(requests[0]).toStrictEqual({ op: 'list', limit: 10 });
       expect(requests[1]).toStrictEqual({ op: 'search', query: 'jose' });
       expect(requests[2]).toStrictEqual({ op: 'get', id: 'n1' });
       expect(requests[3]).toStrictEqual({ op: 'delete', id: 'n1' });
-      expect(requests[4]).toStrictEqual({ op: 'update', id: 'n1', text: 'new text' });
+      expect(requests[4]).toStrictEqual({ op: 'update', id: 'n1', text: 'new text', origin: 'user' });
+      expect(requests[5]).toStrictEqual({ op: 'update', id: 'n1', text: 'scripted', origin: 'agent' });
+    });
+
+    it('keeps notes to one line, like the MCP tool', async () => {
+      const h = harness();
+      expect(await h.run('memory', 'add', '--text', 'line one\nline two')).toBe(2);
+      expect(h.stderr()).toContain('--text must be a single line');
+      expect(await h.run('memory', 'add', '--text', 'with\ttab')).toBe(0);
     });
 
     it.each([
@@ -255,13 +265,14 @@ describe('engine-backed commands', () => {
       expect(h.opened).toHaveLength(0);
     });
 
-    it('runs without options and returns the suite exit code', async () => {
+    it.each([1, 2, 3, 99])('maps the suite exit code %i to 1 (2 is reserved for usage errors) and keeps the report on stdout', async (code) => {
       const h = harness({
-        deps: { runOfflineBench: vi.fn(async () => ({ text: 'threshold missed', exitCode: 3 })) },
+        deps: { runOfflineBench: vi.fn(async () => ({ text: 'threshold missed', exitCode: code })) },
       });
-      expect(await h.run('bench', '--suite', 'offline')).toBe(3);
+      expect(await h.run('bench', '--suite', 'offline')).toBe(1);
       expect(h.deps.runOfflineBench).toHaveBeenCalledWith({});
       expect(h.stdout()).toBe('threshold missed\n');
+      expect(h.stderr()).toContain(`suite exit code ${code}`);
     });
 
     it('explains the paid agent suite and never executes anything', async () => {
@@ -319,6 +330,36 @@ describe('engine-backed commands', () => {
       } finally {
         other.cleanup();
       }
+    });
+
+    it('keeps serving, with stdout protected, until the server reports it has closed', async () => {
+      const originalLog = console.log;
+      let closeServer: () => void = () => undefined;
+      const closed = new Promise<void>((resolve) => {
+        closeServer = resolve;
+      });
+      const h = harness({
+        deps: {
+          serve: vi.fn(async () => ({
+            server: new McpServer({ name: 'test', version: '0' }),
+            shutdown: () => undefined,
+            closed,
+          })),
+        },
+      });
+      let finished = false;
+      const running = h.run('serve').then((code) => {
+        finished = true;
+        return code;
+      });
+      await vi.waitFor(() => expect(h.deps.serve).toHaveBeenCalled());
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(finished).toBe(false);
+      expect(console.log).not.toBe(originalLog);
+      closeServer();
+      expect(await running).toBe(0);
+      expect(console.log).toBe(originalLog);
+      expect(h.fake.engine.close).not.toHaveBeenCalled();
     });
 
     it('closes the engine and fails when the transport cannot start', async () => {

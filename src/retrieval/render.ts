@@ -38,6 +38,8 @@ export interface RenderInput {
   /** Refs (path#Qual) whose exact source was already sent this session, unchanged (delta mode only). */
   sentBefore?: ReadonlySet<string>;
   view: (file: FileRow) => FileView;
+  /** Paths of code files no test or entry point reaches (flagged in their header). */
+  unreached?: ReadonlySet<string>;
   /** Estimated source tokens of an omitted item (for the omitted list). */
   sourceTokens: (item: Item) => number;
 }
@@ -93,9 +95,13 @@ export function itemBlock(item: Item, level: DetailLevel, view: FileView | null,
   return `${line}\n${fence(text, langForPath(item.file.path))}`;
 }
 
-export function fileHeader(file: FileRow, view: FileView | null): string {
+export function fileHeader(file: FileRow, view: FileView | null, unreached = false): string {
   const lines = view ? view.lines.length : file.lineCount;
-  const flags = [view?.crlf ? 'CRLF' : '', file.isTest ? 'test' : ''].filter((f) => f.length > 0);
+  const flags = [
+    view?.crlf ? 'CRLF' : '',
+    file.isTest ? 'test' : '',
+    unreached ? 'UNREACHED: no test or entry point imports it (possibly dead code; heuristic)' : '',
+  ].filter((f) => f.length > 0);
   return `## ${file.path} · h:${shortHash(view?.hash ?? file.hash)} · ${lines} lines${flags.length > 0 ? ` · ${flags.join(' · ')}` : ''}`;
 }
 
@@ -159,7 +165,7 @@ export function renderContext(input: RenderInput): string {
       .filter((i) => i.file.id === file.id && visible(i))
       .sort((a, b) => (a.node?.symbol.startLine ?? 0) - (b.node?.symbol.startLine ?? 0));
     parts.push('');
-    parts.push(fileHeader(file, view));
+    parts.push(fileHeader(file, view, input.unreached?.has(file.path) === true));
     for (const item of fileItems) {
       const level = input.levels.get(item.key) as DetailLevel;
       parts.push(itemBlock(item, level, view, input.sentBefore));

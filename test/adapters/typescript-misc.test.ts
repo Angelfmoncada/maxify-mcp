@@ -178,6 +178,7 @@ describe('typescript adapter: languages and determinism', () => {
     const file = parseTs(text, 'src/big.ts');
     const elapsed = performance.now() - started;
     expect(file.symbols.length).toBeGreaterThan(1000);
-    expect(elapsed).toBeLessThan(1000);
+    // Generous bound: coverage instrumentation slows parsing ~3x; this still catches quadratic behavior.
+    expect(elapsed).toBeLessThan(3000);
   });
 });

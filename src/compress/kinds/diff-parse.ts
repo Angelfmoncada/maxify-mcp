@@ -28,7 +28,10 @@ export interface ParsedDiff {
 }
 
 const HUNK = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/;
+/** "--- a/x", "--- /dev/null" or "--- path<TAB>timestamp": a file header, not a deleted "-- " line. */
+const FILE_HEADER = /^--- (?:"?a\/|\/dev\/null|\S+\t)/;
 const GIT = /^diff --git (?:"?a\/)?(.+?)"? (?:"?b\/)?(.+?)"?$/;
+const MAX_HEADER_CHARS = 4096;
 const LOCKFILES = new Set([
   'package-lock.json',
   'npm-shrinkwrap.json',
@@ -87,6 +90,8 @@ function readHunk(lines: readonly string[], i: number): Hunk {
   let k = i + 1;
   while (k < lines.length && (oldLeft > 0 || newLeft > 0 || (lines[k] ?? '').startsWith('\\'))) {
     const line = lines[k] ?? '';
+    // Guard against wrong hunk counts: never swallow the next file's header.
+    if (line.startsWith('diff --git ') || (FILE_HEADER.test(line) && (lines[k + 1] ?? '').startsWith('+++ '))) break;
     const c = line[0];
     if (c === '+') {
       newLeft--;
@@ -114,7 +119,8 @@ export function parseDiff(lines: readonly string[]): ParsedDiff {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i] ?? '';
-    const git = line.startsWith('diff --git ') ? GIT.exec(line) : null;
+    // Length cap: the GIT regex backtracks quadratically on long lines full of spaces.
+    const git = line.startsWith('diff --git ') && line.length <= MAX_HEADER_CHARS ? GIT.exec(line) : null;
     const plain = line.startsWith('--- ') && (lines[i + 1] ?? '').startsWith('+++ ') && (file === undefined || file.hunks.length > 0);
     if (git !== null || plain) {
       if (files.length === 0) preambleEnd = i;

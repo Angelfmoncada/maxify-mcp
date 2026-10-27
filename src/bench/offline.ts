@@ -40,7 +40,7 @@ export const EXIT_REGRESSION = 1;
 export const EXIT_INVALID = 2;
 export const EXIT_NO_ENGINE = 3;
 
-export const DEFAULT_BUDGETS: readonly number[] = [2000, 4000, 8000];
+export const DEFAULT_BUDGETS: readonly number[] = [2000, 4000, 6000, 8000];
 
 /** Everything the runner needs from its environment; tests inject a fake engine and a temp fixture. */
 export interface OfflineBenchDeps {

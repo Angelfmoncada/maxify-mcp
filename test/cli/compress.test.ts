@@ -180,13 +180,14 @@ describe('maxify compress', () => {
       expect(h.stdout()).toBe('');
     });
 
-    it('prints errors as JSON on stdout with --json, still exiting 1', async () => {
+    it('keeps errors on stderr as plain text even with --json (stdout carries JSON only on success)', async () => {
       const h = harness({
         stdin: LOG,
         engine: { compress: async () => okOutput('bad', { isError: true }) },
       });
       expect(await h.run('compress', '--json')).toBe(1);
-      expect(JSON.parse(h.stdout())).toMatchObject({ text: 'bad', isError: true });
+      expect(h.stdout()).toBe('');
+      expect(h.stderr()).toBe('bad\n');
     });
 
     it('closes the engine after use, even when compression fails', async () => {

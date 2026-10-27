@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { MaxifyError } from '../core/errors.js';
 import { fence, langForPath } from '../core/fence.js';
 import { sha256 } from '../core/hash.js';
@@ -6,6 +5,7 @@ import type { RepoGuard } from '../core/paths.js';
 import { estimateTokens } from '../core/tokens.js';
 import type { EvidenceItem, SourceRequest } from '../engine/types.js';
 import type { Exclusions } from '../indexer/exclusions.js';
+import { readRepoText } from '../indexer/safe-read.js';
 import type { IndexStore } from '../store/index-store.js';
 import type { FileRow, SymbolRow } from '../store/rows.js';
 import type { EvidenceRef } from './refs.js';
@@ -33,14 +33,8 @@ interface Target {
   label: string;
 }
 
-function assertReadable(deps: SourceDeps, rel: string, file: FileRow | null): void {
-  const cls = deps.exclusions.classifyWithAncestors(rel);
-  if (cls === 'secret' || file?.status === 'secret') {
-    throw new MaxifyError('EXCLUDED', `${rel} is classified as a secret file; Maxify never reads it.`);
-  }
-  if (cls === 'ignored') {
-    throw new MaxifyError('EXCLUDED', `${rel} is excluded (.gitignore/.maxifyignore/config/defaults); Maxify does not serve it.`);
-  }
+function assertIndexedReadable(rel: string, file: FileRow | null): void {
+  if (file?.status === 'secret') throw new MaxifyError('EXCLUDED', `${rel} is classified as a secret file; Maxify never reads it.`);
   if (file?.status === 'binary') throw new MaxifyError('INVALID_INPUT', `${rel} is a binary file.`);
 }
 
@@ -89,13 +83,7 @@ function resolveTarget(deps: SourceDeps, ref: EvidenceRef): Target | { ambiguous
 }
 
 function readLines(deps: SourceDeps, rel: string): { lines: string[]; hash: string; crlf: boolean } {
-  let buffer: Buffer;
-  try {
-    buffer = readFileSync(deps.guard.abs(rel));
-  } catch {
-    throw new MaxifyError('NOT_FOUND', `${rel} does not exist on disk (it may have been deleted or renamed).`);
-  }
-  const text = buffer.toString('utf8');
+  const { buffer, text } = readRepoText(deps.guard, deps.exclusions, rel);
   const lines = text.split(/\r?\n/);
   if (text.endsWith('\n')) lines.pop();
   return { lines, hash: sha256(buffer), crlf: text.includes('\r\n') };
@@ -120,7 +108,7 @@ export function readSource(deps: SourceDeps, ref: EvidenceRef, req: SourceReques
   const target = resolveTarget(deps, ref);
   if ('ambiguous' in target) return { text: target.ambiguous, complete: true, item: null };
   const file = deps.store.fileByPath(target.path);
-  assertReadable(deps, target.path, file);
+  assertIndexedReadable(target.path, file);
   const { lines, hash, crlf } = readLines(deps, target.path);
   const total = lines.length;
   const context = Math.max(0, Math.min(50, req.contextLines ?? 0));

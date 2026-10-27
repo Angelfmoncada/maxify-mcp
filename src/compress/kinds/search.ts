@@ -5,9 +5,10 @@ import type { Critical } from '../plan.js';
 import { criticalOnly, tokens, type KindContext, type KindOutput } from '../output.js';
 import { largestFitting, progressive } from '../progressive.js';
 
-const MATCH = /^((?:[A-Za-z]:[\\/])?[^:\n]*?):(\d+):(.*)$/;
-const CONTEXT_GENERIC = /^((?:[A-Za-z]:[\\/])?[^:\n]*?[./\\][^:\n]*?)-(\d+)-(.*)$/;
-const NO_LINE = /^((?:[A-Za-z]:[\\/])?[^:\s][^:]*\.[A-Za-z0-9]+):(.*)$/;
+// Paths must contain a letter and must not start with a date (timestamps are not paths).
+const MATCH = /^((?:[A-Za-z]:[\\/])?(?!\d{4}-\d{2}-\d{2})(?=[^:\n]*[A-Za-z])[^:\n]*?):(\d+):(.*)$/;
+const CONTEXT_GENERIC = /^((?:[A-Za-z]:[\\/])?(?!\d{4}-\d{2}-\d{2})[^:\n]*?[./\\][^:\n]*?)-(\d+)-(.*)$/;
+const NO_LINE = /^((?:[A-Za-z]:[\\/])?(?!\d{4}-\d{2}-\d{2})[^:\s][^:]*\.[A-Za-z0-9]+):(.*)$/;
 const DIAGNOSTIC = /:\d+:\d+:?\s+(?:fatal\s+)?(?:error|warning)\b/i;
 
 interface Group {

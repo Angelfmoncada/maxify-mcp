@@ -66,9 +66,30 @@ export function displayArg(arg) {
   return /^[\w@%+=:,./\\-]+$/.test(text) ? text : JSON.stringify(text);
 }
 
+/**
+ * The command that starts Claude Code: `claude`, unless MAXIFY_BENCH_CLAUDE holds a JSON array
+ * (command followed by leading arguments). That override exists only so tests can run the whole harness
+ * against a scripted stand-in without spending usage; run.mjs prints a warning whenever it is active.
+ */
+export function claudeCommand() {
+  const override = process.env.MAXIFY_BENCH_CLAUDE;
+  if (override === undefined || override === '') return { command: 'claude', prefix: [], overridden: false };
+  let parsed;
+  try {
+    parsed = JSON.parse(override);
+  } catch {
+    throw new Error('MAXIFY_BENCH_CLAUDE must be a JSON array of strings');
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some((item) => typeof item !== 'string' || item === '')) {
+    throw new Error('MAXIFY_BENCH_CLAUDE must be a JSON array of non-empty strings');
+  }
+  return { command: parsed[0], prefix: parsed.slice(1), overridden: true };
+}
+
 /** Version string of the installed Claude Code, or null when it cannot be run. */
 export function claudeVersion() {
-  const result = run('claude', ['--version'], { timeoutMs: 30_000 });
+  const { command, prefix } = claudeCommand();
+  const result = run(command, [...prefix, '--version'], { timeoutMs: 30_000 });
   return result.ok ? result.stdout.trim() : null;
 }
 
@@ -109,7 +130,8 @@ export function runClaude({ args, cwd, env, timeoutMs, stdoutLog, stderrLog, onC
       if (child !== undefined) killTree(child);
     }, timeoutMs);
     try {
-      child = spawn('claude', args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      const { command, prefix } = claudeCommand();
+      child = spawn(command, [...prefix, ...args], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     } catch (error) {
       finish({ exitCode: null, signal: null, spawnError: String(error.message ?? error) });
       return;

@@ -151,24 +151,21 @@ export function planLevels(items: readonly Item[], opts: PlanOptions): Plan {
   return { levels: state.levels, covered: state.coverage(), estimate: state.total() };
 }
 
+/** Items below this fraction of the top priority never take budget beyond a map line. */
+const FILL_THRESHOLD = 0.2;
+
+/**
+ * Spend what is left of the budget on the most relevant evidence first, up to
+ * exact source. The budget is a ceiling, not a target: items under the
+ * relevance threshold are not upgraded, so unused budget is simply not spent.
+ */
 function upgradeWithLeftover(state: PlanState, sorted: readonly Item[], opts: PlanOptions): void {
-  let testsUpgraded = 0;
-  let relatedUpgraded = 0;
+  const top = sorted.length > 0 ? priority(sorted[0] as Item) : 0;
   for (const item of sorted) {
+    if (priority(item) < FILL_THRESHOLD * top) break;
     const ceiling = ceilingFor(item, opts.detail);
-    if (isPrimary(item) || item.roles.has('type') || item.roles.has('callee')) {
-      state.attemptBest(item, ceiling);
-    } else if (item.roles.has('test') && testsUpgraded < 2 && item.node) {
-      const before = state.level(item);
-      state.attemptBest(item, clamp('source', ceiling));
-      if (state.level(item) !== before) testsUpgraded++;
-    } else if (item.roles.has('caller') || item.roles.has('parent')) {
-      state.attemptBest(item, clamp('signature', ceiling));
-    } else if (item.roles.has('related') && relatedUpgraded < 5) {
-      const before = state.level(item);
-      state.attemptBest(item, clamp('signature', ceiling));
-      if (state.level(item) !== before) relatedUpgraded++;
-    }
+    const target = item.roles.has('parent') && !isPrimary(item) ? clamp('signature', ceiling) : ceiling;
+    state.attemptBest(item, target);
   }
 }
 

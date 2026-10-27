@@ -123,8 +123,8 @@ export function expandCandidates(graph: Graph, candidates: Map<string, Item>, op
   const ranked = [...items.values()].sort(byScore);
   const top = ranked[0]?.score ?? 0;
   const primaries = ranked
-    .filter((i) => i.roles.has('focus') || (i.node !== null && i.score >= 0.35 * top))
-    .slice(0, opts.maxPrimaries ?? 5)
+    .filter((i) => i.roles.has('focus') || (i.node !== null && i.score >= 0.3 * top))
+    .slice(0, opts.maxPrimaries ?? 8)
     .map((i) => upsertItem(items, { ...i, roles: new Set<Role>(['primary']), relations: [] }));
   for (const primary of primaries) {
     const node = primary.node;

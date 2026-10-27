@@ -48,6 +48,23 @@ export function assertSafeRoot(root: string): void {
   }
 }
 
+const WINDOWS_DEVICE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)(\..*)?$/i;
+
+/**
+ * Windows path aliases that could reach a file under a name the exclusion
+ * patterns do not see: alternate data streams (`.env::$DATA`), 8.3 short names
+ * (`ENV~1`), trailing dots/spaces (`.env.`) and device names (`CON`, `NUL`).
+ */
+function assertPlainWindowsPath(cleaned: string, input: string): void {
+  const withoutDrive = cleaned.replace(/^[A-Za-z]:(?=[\\/])/, '');
+  for (const segment of withoutDrive.split(/[\\/]+/)) {
+    if (segment === '' || segment === '.' || segment === '..') continue;
+    const bad =
+      segment.includes(':') || /[. ]$/.test(segment) || /~\d/.test(segment) || WINDOWS_DEVICE.test(segment);
+    if (bad) throw new MaxifyError('INVALID_INPUT', `Path "${input}" uses a Windows alias form (stream, short name, trailing dot/space or device name).`);
+  }
+}
+
 /**
  * Validates every path that reaches the filesystem. All paths handed to the
  * model or stored in the index are POSIX paths relative to the root.
@@ -68,8 +85,15 @@ export class RepoGuard {
   relIfInside(absPath: string): string | null {
     const rel = path.relative(this.root, absPath);
     if (rel === '') return '';
-    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) return null;
     return toPosix(rel);
+  }
+
+  /** Relative POSIX path of the real (symlink-resolved) file, or null when it does not exist or escapes root. */
+  realRel(rel: string): string | null {
+    const absolute = this.abs(rel);
+    if (!existsSync(absolute)) return null;
+    return this.relIfInside(realpath(absolute));
   }
 
   /**
@@ -82,6 +106,7 @@ export class RepoGuard {
       throw new MaxifyError('INVALID_INPUT', 'Path is empty or contains a NUL byte.');
     }
     const cleaned = input.replace(/^file:\/\//, '');
+    if (process.platform === 'win32') assertPlainWindowsPath(cleaned, input);
     const absolute = path.resolve(this.root, cleaned);
     const rel = this.relIfInside(absolute);
     if (rel === null) {

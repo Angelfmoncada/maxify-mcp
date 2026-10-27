@@ -18,6 +18,8 @@ export interface QueryTerm {
 export interface TaskQuery {
   /** Identifier-looking tokens exactly as written (camelCase, snake_case, PascalCase, dotted members). */
   identifiers: string[];
+  /** Capitalized or ALL-CAPS words (Role, ROLES) that may name a symbol; matched case-sensitively only. */
+  names: string[];
   /** Path-like tokens (contain '/' or a known source extension). */
   paths: string[];
   /** Explicit refs like 'src/a.ts#Foo' or 'src/a.ts:10-20'. */
@@ -69,6 +71,18 @@ function isIdentifierLike(token: string): boolean {
   return /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)+$/.test(token) && !SOURCE_EXT.test(token);
 }
 
+/**
+ * Capitalized words that may name a symbol: `Role` mid-sentence or an ALL-CAPS constant
+ * of 4+ letters (`ROLES`). Sentence-initial words and short acronyms (`API`) are prose.
+ */
+function looksLikeName(token: string, task: string): boolean {
+  if (/^[A-Z][A-Z0-9_]{3,}$/.test(token)) return /[A-Z]{4,}|_/.test(token);
+  if (!/^[A-Z][a-z0-9]{2,}$/.test(token)) return false;
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sentenceStart = new RegExp(`(^|[.!?:]\\s+|\\n\\s*)${escaped}\\b`);
+  return !sentenceStart.test(task);
+}
+
 function pushTerm(terms: Map<string, QueryTerm>, term: string, prefix: boolean, weight: number): void {
   if (term.length < 2) return;
   const existing = terms.get(term);
@@ -88,6 +102,7 @@ function collectTokens(task: string): { quoted: string[]; tokens: string[] } {
 export function analyzeTask(task: string): TaskQuery {
   const { quoted, tokens } = collectTokens(task);
   const identifiers: string[] = [];
+  const names: string[] = [];
   const paths: string[] = [];
   const refs: string[] = [];
   const terms = new Map<string, QueryTerm>();
@@ -106,23 +121,30 @@ export function analyzeTask(task: string): TaskQuery {
       identifiers.push(token);
       const last = token.split('.').pop() ?? token;
       pushTerm(terms, last.toLowerCase(), false, 2.0);
-      for (const part of splitIdentifier(token)) if (!STOPWORDS.has(part)) pushTerm(terms, part, part.length >= 5, 1.2);
+      for (const part of splitIdentifier(token)) if (!STOPWORDS.has(part)) pushTerm(terms, part, false, 1.2);
       continue;
     }
+    if (looksLikeName(token, task)) names.push(token);
     for (const word of splitIdentifier(stripAccents(token))) proseWords.push(word);
   }
   const kept = proseWords.filter((w) => w.length >= 3 && !STOPWORDS.has(w) && !/^\d+$/.test(w));
   kept.forEach((word, i) => {
     const stemmed = stem(word);
-    pushTerm(terms, stemmed, stemmed.length >= 4, 1.0);
+    // Prefix matching only when a suffix was removed (expires -> expir*), so "token" does not match "tokenize".
+    pushTerm(terms, stemmed, stemmed !== word && stemmed.length >= 4, 1.0);
     const next = kept[i + 1];
     if (next) pushTerm(terms, `${word}${next}`, false, 1.3);
   });
   for (const q of quoted) {
-    for (const word of splitIdentifier(stripAccents(q))) if (word.length >= 3 && !STOPWORDS.has(word)) pushTerm(terms, stem(word), word.length >= 5, 1.1);
+    for (const word of splitIdentifier(stripAccents(q))) {
+      if (word.length < 3 || STOPWORDS.has(word)) continue;
+      const stemmed = stem(word);
+      pushTerm(terms, stemmed, stemmed !== word, 1.1);
+    }
   }
   return {
     identifiers: [...new Set(identifiers)],
+    names: [...new Set(names)].filter((n) => !identifiers.includes(n)),
     paths: [...new Set(paths)],
     refs: [...new Set(refs)],
     quoted,

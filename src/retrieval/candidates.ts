@@ -3,6 +3,7 @@ import { splitIdentifier } from '../indexer/terms.js';
 import type { FtsHit, IndexStore } from '../store/index-store.js';
 import type { FileRow } from '../store/rows.js';
 import type { Graph, SymbolNode } from './graph.js';
+import { liveFiles, livenessFactor } from './liveness.js';
 import { itemKey, maxLevelFor, upsertItem, type Item, type Role } from './items.js';
 import { ftsOr, ftsTerm, type QueryTerm, type TaskQuery } from './query.js';
 
@@ -41,14 +42,31 @@ function tokenize(text: string): Set<string> {
   return out;
 }
 
-function matches(tokens: Set<string>, term: QueryTerm): boolean {
-  if (tokens.has(term.term)) return true;
-  if (!term.prefix) return false;
-  for (const token of tokens) if (token.startsWith(term.term)) return true;
-  return false;
+const INFLECTION = /^(?:e|ed|es|s|ing|ings|ion|ions|ation|ations|er|ers|y|ies|ied|ly|ment|ments|ry)$/;
+
+/**
+ * 1 for an exact token or an inflection of the stem (expir* -> expired), 0.6 for any
+ * other prefix match (token* -> tokenize is a different word), else 0.
+ */
+function matches(tokens: Set<string>, term: QueryTerm): number {
+  if (tokens.has(term.term)) return 1;
+  if (!term.prefix) return 0;
+  let best = 0;
+  for (const token of tokens) {
+    if (!token.startsWith(term.term)) continue;
+    if (INFLECTION.test(token.slice(term.term.length))) return 1;
+    best = 0.6;
+  }
+  return best;
 }
 
-/** Our own BM25-like field scoring: robust on small repos where FTS5 bm25() degenerates. */
+const CODE_KINDS = new Set(['function', 'class', 'method', 'constructor', 'accessor', 'property', 'interface', 'type', 'enum', 'namespace', 'variable', 'component', 'hook']);
+
+/**
+ * Our own BM25-like field scoring: robust on small repos where FTS5 bm25() degenerates.
+ * A symbol matched only through its file path (e.g. every symbol of client.ts for "client-side")
+ * keeps 30% of its score: the path says where to look, not which symbol matters.
+ */
 function scoreHit(hit: FtsHit, terms: readonly QueryTerm[], idf: Map<string, number>): number {
   const fields: Record<Field, Set<string>> = {
     name: tokenize(hit.name),
@@ -59,14 +77,17 @@ function scoreHit(hit: FtsHit, terms: readonly QueryTerm[], idf: Map<string, num
     body: tokenize(hit.body),
   };
   let score = 0;
+  let outsidePath = false;
   for (const term of terms) {
     let best = 0;
     for (const field of Object.keys(fields) as Field[]) {
-      if (FIELD_WEIGHT[field] > best && matches(fields[field], term)) best = FIELD_WEIGHT[field];
+      const value = FIELD_WEIGHT[field] * matches(fields[field], term);
+      if (value > best) best = value;
+      if (value > 0 && field !== 'path') outsidePath = true;
     }
     score += best * term.weight * (idf.get(term.term) ?? 1);
   }
-  return score;
+  return hit.symbolOrdinal !== null && !outsidePath ? score * 0.3 : score;
 }
 
 function computeIdf(store: IndexStore, terms: readonly QueryTerm[]): Map<string, number> {
@@ -121,6 +142,7 @@ export function findCandidates(ctx: CandidateContext): Map<string, Item> {
   const { store, graph, query } = ctx;
   const items = new Map<string, Item>();
   const raw: Array<{ file: FileRow; node: SymbolNode | null; score: number }> = [];
+  const live = liveFiles(store);
   if (query.terms.length > 0) {
     const idf = computeIdf(store, query.terms);
     let hits: FtsHit[] = [];
@@ -133,7 +155,7 @@ export function findCandidates(ctx: CandidateContext): Map<string, Item> {
       const file = store.fileById(hit.fileId);
       if (!file) continue;
       const node = hit.symbolOrdinal === null ? null : graph.node(file, hit.symbolOrdinal);
-      raw.push({ file, node, score: scoreHit(hit, query.terms, idf) * intentWeight(file, node, query) });
+      raw.push({ file, node, score: scoreHit(hit, query.terms, idf) * intentWeight(file, node, query) * livenessFactor(file, live) });
     }
   }
   const top = Math.max(1e-9, ...raw.map((r) => r.score));
@@ -151,13 +173,18 @@ export function findCandidates(ctx: CandidateContext): Map<string, Item> {
 }
 
 function boostExactIdentifiers(ctx: CandidateContext, items: Map<string, Item>): void {
-  for (const identifier of ctx.query.identifiers) {
+  const lookups = [
+    ...ctx.query.identifiers.map((identifier) => ({ identifier, insensitive: true })),
+    ...ctx.query.names.map((identifier) => ({ identifier, insensitive: false })),
+  ];
+  for (const { identifier, insensitive } of lookups) {
     const name = identifier.split('.').pop() ?? identifier;
     const exact = ctx.store.symbolsByName(identifier, 20);
     const found = exact.length > 0 ? exact : ctx.store.symbolsByName(name, 20);
-    const list = found.length > 0 ? found : ctx.store.symbolsByNameInsensitive(name, 20);
+    const list = found.length > 0 || !insensitive ? found : ctx.store.symbolsByNameInsensitive(name, 20);
     const bonus = found.length > 0 ? 1.0 : 0.7;
     for (const s of list) {
+      if (!insensitive && !CODE_KINDS.has(s.kind)) continue;
       const file = ctx.graph.file(s.path);
       if (!file) continue;
       const node = ctx.graph.node(file, s.ordinal);
