@@ -5,7 +5,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { UsageError, parseArgs } from './lib/args.mjs';
 import { BUILTIN_TOOLS, buildClaudeArgs, claudeCommand, claudeVersion, killTree } from './lib/claude.mjs';
-import { ALL_CONDITIONS, CAVEMAN_CONDITIONS, CONDITION_FEATURES, describeCondition, detectFeatures } from './lib/conditions.mjs';
+import { ALL_CONDITIONS, CONDITION_FEATURES, describeCondition, detectFeatures } from './lib/conditions.mjs';
 import { executeRun } from './lib/execute.mjs';
 import { DEFAULT_MAX_BUDGET_USD, DEFAULT_MAX_TOTAL_USD, buildPlan, renderPlan } from './lib/plan.mjs';
 import { appendRecord } from './lib/results.mjs';
@@ -22,7 +22,6 @@ const SCHEMA = {
   effort: { type: 'string' },
   'max-budget-usd': { type: 'number', default: DEFAULT_MAX_BUDGET_USD },
   'max-total-usd': { type: 'number', default: DEFAULT_MAX_TOTAL_USD },
-  'caveman-load': { type: 'string', default: 'settings' },
   'skip-unavailable': { type: 'boolean' },
   out: { type: 'string' },
   'keep-workspaces': { type: 'boolean' },
@@ -38,14 +37,13 @@ Add --confirm-spend to start real Claude Code runs (they spend your Claude usage
 
   --tasks a,b            task ids under bench/tasks/agent (default: all)
   --conditions a,b       ${ALL_CONDITIONS.join(', ')}, or "all"
-                         default: every available condition except the caveman ones
+                         default: every available condition
   --reps N               repetitions per task and condition (default 1; use 3+ before concluding anything)
   --warmth cold|both     "both" repeats each job warm right after the cold run (default cold)
   --model NAME           model alias or id passed to claude --model (default sonnet)
   --effort LEVEL         low|medium|high|max, passed through when given
   --max-budget-usd X     per-run cap passed to claude --max-budget-usd (default ${DEFAULT_MAX_BUDGET_USD})
   --max-total-usd X      stop starting new runs once reported cost reaches X (default ${DEFAULT_MAX_TOTAL_USD})
-  --caveman-load MODE    settings (default, project enabledPlugins) | plugin-dir (claude --plugin-dir)
   --skip-unavailable     drop requested conditions that are unavailable instead of aborting
   --out FILE             results JSONL (default bench/results/agent-<runId>.jsonl)
   --keep-workspaces      keep the temporary workspaces for inspection
@@ -61,9 +59,7 @@ function fail(message) {
 function resolveConditions(requested, infos, skipUnavailable) {
   const byName = new Map(infos.map((info) => [info.name, info]));
   let names;
-  if (requested === undefined || requested.length === 0) {
-    names = infos.filter((info) => info.available && !info.usesCaveman).map((info) => info.name);
-  } else if (requested.length === 1 && requested[0] === 'all') {
+  if (requested === undefined || requested.length === 0 || (requested.length === 1 && requested[0] === 'all')) {
     names = infos.filter((info) => info.available).map((info) => info.name);
   } else {
     const unknown = requested.filter((name) => !byName.has(name));
@@ -88,8 +84,6 @@ function authNote() {
 function collectVersions(conditionNames, features, claude) {
   const used = new Set(conditionNames.flatMap((name) => CONDITION_FEATURES[name]));
   const versions = { claudeCode: claude, node: process.version, harness: 1 };
-  if (used.has('caveman')) versions.caveman = { version: features.caveman.version, gitCommitSha: features.caveman.gitCommitSha, plugin: features.caveman.pluginId };
-  if (used.has('graphify-cli') || used.has('graphify-mcp')) versions.graphify = features['graphify-cli'].version ?? features['graphify-mcp'].version;
   if (used.has('maxify')) versions.maxify = features.maxify.version;
   return versions;
 }
@@ -115,7 +109,6 @@ async function main(argv) {
   }
   if (!['cold', 'both'].includes(o.warmth)) return fail('--warmth must be cold or both');
   if (!Number.isInteger(o.reps) || o.reps < 1) return fail('--reps must be a positive integer');
-  if (!['settings', 'plugin-dir'].includes(o['caveman-load'])) return fail('--caveman-load must be settings or plugin-dir');
   if (o.effort !== undefined && !['low', 'medium', 'high', 'max'].includes(o.effort)) return fail('--effort must be low, medium, high or max');
   if (!(o['max-budget-usd'] > 0) || !(o['max-total-usd'] > 0)) return fail('--max-budget-usd and --max-total-usd must be positive');
 
@@ -129,9 +122,6 @@ async function main(argv) {
   const infos = ALL_CONDITIONS.map((name) => describeCondition(name, features));
   const selection = resolveConditions(o.conditions, infos, o['skip-unavailable'] === true);
   if (selection.error !== undefined) return fail(selection.error);
-  if (selection.names.some((name) => CAVEMAN_CONDITIONS.includes(name))) {
-    process.stderr.write('Note: caveman conditions are selected. The caveman plugin hooks write small state files under ~/.claude (not this harness).\n');
-  }
 
   const plan = buildPlan({
     tasks,
@@ -180,7 +170,7 @@ async function execute(plan, o, features, conditionNames, claude) {
   const runDir = path.join(path.dirname(outFile), runId);
   mkdirSync(runDir, { recursive: true });
   const versions = collectVersions(conditionNames, features, claude);
-  const options = { model: o.model, effort: o.effort, maxBudgetUsd: o['max-budget-usd'], cavemanLoad: o['caveman-load'] };
+  const options = { model: o.model, effort: o.effort, maxBudgetUsd: o['max-budget-usd'] };
 
   let stopping = false;
   let activeChild = null;

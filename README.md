@@ -129,7 +129,7 @@ Offline suite (18 tasks on a React + Node + TypeScript fixture, local token esti
 | Simulated grep + read 3 files | 5,857 | 30 % |
 | Simulated grep + read 8 line windows | 15,134 | 68 % |
 
-At budgets 2000 and 4000 the first call reaches less evidence than the 8-window strategy; the suite flags that as a regression, which is why the default is 6000. The agent benchmark (Claude Code end to end: native, Caveman, Graphify, Maxify) is built and dry-run verified but **not executed yet**, so no session-level or cost savings are claimed. Methodology, caveats and reproduction: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+At budgets 2000 and 4000 the first call reaches less evidence than the 8-window strategy; the suite flags that as a regression, which is why the default is 6000. The agent benchmark (Claude Code end to end, native versus Maxify) is built and dry-run verified but **not executed yet**, so no session-level or cost savings are claimed. Methodology, caveats and reproduction: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## Limitations
 
@@ -142,7 +142,7 @@ At budgets 2000 and 4000 the first call reaches less evidence than the 8-window 
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — pipeline, data model, provenance, freshness, security model.
-- [docs/RESEARCH.md](docs/RESEARCH.md) — Caveman, Graphify and Claude Code MCP: facts, vendor claims, hypotheses, decisions.
+- [docs/RESEARCH.md](docs/RESEARCH.md) — Claude Code MCP facts, hypotheses, technical decisions.
 - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) — methodology, results, limitations.
 - [assets/brand/BRAND.md](assets/brand/BRAND.md) — logo and colors.
 

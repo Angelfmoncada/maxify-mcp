@@ -117,25 +117,21 @@ export interface FeatureInfo {
   available: boolean;
   reason?: string;
   version?: string;
-  pluginId?: string;
-  installPath?: string;
-  gitCommitSha?: string | null;
 }
 
 export interface ConditionsModule {
   CONDITION_FEATURES: Record<string, string[]>;
   ALL_CONDITIONS: string[];
-  CAVEMAN_CONDITIONS: string[];
   contributionsFor(
     name: string,
-    ctx: { workspace: string; maxifyHome: string; cavemanLoad: string },
+    ctx: { workspace: string; maxifyHome: string },
     features: Record<string, FeatureInfo>,
   ): Contribution;
   verifyConditionLoaded(name: string, init: InitInfo | null): ConditionCheck;
   describeCondition(
     name: string,
     features: Record<string, FeatureInfo>,
-  ): { name: string; available: boolean; reason: string; usesCaveman: boolean };
+  ): { name: string; available: boolean; reason: string };
 }
 
 export interface ClaudeModule {

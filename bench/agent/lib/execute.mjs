@@ -1,6 +1,6 @@
 // Executes ONE Claude Code run in a prepared workspace and turns it into a result record.
 // classifyRun and buildRecord are pure and unit-tested with synthetic streams; executeRun spends usage.
-import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { diffStats, evaluateAnswer, listVisibleTests, runNodeTests } from './checks.mjs';
 import { BUILTIN_TOOLS, CLAUDE_ENV_OVERRIDES, buildClaudeArgs, runClaude } from './claude.mjs';
@@ -136,13 +136,11 @@ function unique(list) {
 export async function executeRun({ task, condition, rep, warmth, ctx }) {
   const { dir, tempRoot, nonce, runDir, features, options } = ctx;
   const startedAt = new Date().toISOString();
-  const fakeHome = path.join(tempRoot, 'home');
   const maxifyHome = path.join(tempRoot, 'maxify-home');
-  mkdirSync(fakeHome, { recursive: true });
 
   removeConditionFiles(dir);
   writeBaseClaudeMd(dir, nonce);
-  const prepareCtx = { workspace: dir, tempRoot, fakeHome, maxifyHome, warmth, cavemanLoad: options.cavemanLoad };
+  const prepareCtx = { workspace: dir, tempRoot, maxifyHome, warmth };
   const prepare = prepareCondition(condition, prepareCtx);
   const contribution = contributionsFor(condition, prepareCtx, features);
   const mcpConfigPath = writeConditionFiles(dir, contribution);

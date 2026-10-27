@@ -57,12 +57,12 @@ describe('summarizeStream', () => {
     const stream = syntheticStream({
       tools: ['Read', 'mcp__maxify__maxify_context'],
       mcpServers: [{ name: 'maxify', status: 'connected' }],
-      plugins: ['caveman'],
+      plugins: ['example'],
     });
     const init = summarizeStream(parseJsonLines(stream).events).init;
     expect(init?.tools).toContain('mcp__maxify__maxify_context');
     expect(init?.mcpServers).toEqual([{ name: 'maxify', status: 'connected' }]);
-    expect(init?.plugins).toEqual(['caveman']);
+    expect(init?.plugins).toEqual(['example']);
     expect(init?.apiKeySource).toBe('none');
     expect(init?.model).toBe('claude-synthetic');
   });
@@ -132,7 +132,7 @@ describe('classifyRun', () => {
   });
 
   it('rejects runs whose preparation failed', async () => {
-    const result = await classify(syntheticStream(), { prepareProblems: ['graphify-cli: graph build failed'] });
+    const result = await classify(syntheticStream(), { prepareProblems: ['maxify: maxify index failed'] });
     expect(result.valid).toBe(false);
     expect(result.invalidReasons[0]).toMatch(/prepare failed/);
   });

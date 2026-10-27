@@ -88,7 +88,7 @@ export function mergeSettings(base, extra) {
 
 /** Deletes every file a previous run's condition setup may have left (they are git-excluded, so reset keeps them). */
 export function removeConditionFiles(dir) {
-  for (const entry of ['CLAUDE.md', '.claude', '.mcp.json', 'graphify-out']) {
+  for (const entry of ['CLAUDE.md', '.claude', '.mcp.json']) {
     rmSync(path.join(dir, entry), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
@@ -96,12 +96,12 @@ export function removeConditionFiles(dir) {
 /** Step 1 of condition setup: the project memory every condition shares. */
 export function writeBaseClaudeMd(dir, nonce) {
   writeFileSync(path.join(dir, 'CLAUDE.md'), baseClaudeMd(nonce));
-  excludeFromGit(dir, ['CLAUDE.md', '.claude/', '.mcp.json', 'graphify-out/']);
+  excludeFromGit(dir, ['CLAUDE.md', '.claude/', '.mcp.json']);
 }
 
 /**
  * Last step of condition setup. Appends the condition's CLAUDE.md lines, merges its settings into
- * .claude/settings.json (a tool such as `graphify claude install` may already have written hooks there)
+ * .claude/settings.json (a preparation step may already have written settings there)
  * and writes .mcp.json. Returns the absolute path of .mcp.json.
  */
 export function writeConditionFiles(dir, { claudeMdLines, settings, mcpServers }) {

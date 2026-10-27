@@ -6,6 +6,7 @@
 //   FAKE_CLAUDE_SOLUTION  patch applied with git in the workspace when mode is "solve"
 //   FAKE_CLAUDE_ANSWER    file whose content becomes the final answer text
 //   FAKE_CLAUDE_COST      total_cost_usd reported in the result event (default 0.2)
+//   FAKE_CLAUDE_DROP_MCP  when set, the init event lists no MCP servers (as if every server failed to start)
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -36,7 +37,7 @@ const entry = {
 };
 if (process.env.FAKE_CLAUDE_LOG) appendFileSync(process.env.FAKE_CLAUDE_LOG, `${JSON.stringify(entry)}\n`);
 
-const servers = Object.keys(entry.mcpConfig?.mcpServers ?? {});
+const servers = process.env.FAKE_CLAUDE_DROP_MCP ? [] : Object.keys(entry.mcpConfig?.mcpServers ?? {});
 const plugins = Object.keys(entry.settings?.enabledPlugins ?? {}).map((id) => id.split('@')[0]);
 const emit = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
 

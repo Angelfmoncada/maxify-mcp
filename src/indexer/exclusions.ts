@@ -43,7 +43,6 @@ export const DEFAULT_IGNORES: readonly string[] = [
   '.tox/',
   '.gradle/',
   '.idea/',
-  'graphify-out/',
   '.maxify/',
 ];
 

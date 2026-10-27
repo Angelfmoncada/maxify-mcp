@@ -34,9 +34,7 @@ export function buildPlan({ tasks, conditions, reps, warmth, maxBudgetUsd, maxTo
 function conditionLine(info) {
   const status = info.available ? 'available' : 'UNAVAILABLE';
   const details = info.available
-    ? [info.versions.length > 0 ? info.versions.join(', ') : null, info.usesCaveman ? 'opt-in: caveman hooks write state files under ~/.claude' : null]
-        .filter(Boolean)
-        .join('; ')
+    ? info.versions.join(', ')
     : info.reason;
   return `  ${info.name.padEnd(22)} ${status}${details === '' ? '' : `  ${details}`}`;
 }

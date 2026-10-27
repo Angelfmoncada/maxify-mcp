@@ -21,9 +21,6 @@ const scratch = mkdtempSync(path.join(os.tmpdir(), 'maxify-agent-test-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const ALL_FEATURES: Record<string, FeatureInfo> = {
-  caveman: { available: true, pluginId: 'caveman@caveman', version: '4.0.1', installPath: path.join(scratch, 'plugins', 'caveman'), gitCommitSha: 'abc' },
-  'graphify-cli': { available: true, version: 'graphify 0.9.92' },
-  'graphify-mcp': { available: true, version: 'graphify 0.9.92' },
   maxify: { available: true, version: '0.1.0' },
 };
 
@@ -77,14 +74,13 @@ describe('buildClaudeArgs', () => {
 });
 
 describe('conditions', () => {
-  const ctx = { workspace: path.join(scratch, 'ws'), maxifyHome: path.join(scratch, 'maxify-home'), cavemanLoad: 'settings' };
+  const ctx = { workspace: path.join(scratch, 'ws'), maxifyHome: path.join(scratch, 'maxify-home') };
 
-  it('defines the five required conditions plus the graphify CLI variants', async () => {
-    const { CONDITION_FEATURES, CAVEMAN_CONDITIONS } = await loadConditions();
-    for (const name of ['native', 'caveman', 'graphify', 'caveman+graphify', 'maxify']) expect(Object.keys(CONDITION_FEATURES)).toContain(name);
+  it('defines the native baseline and the maxify condition', async () => {
+    const { CONDITION_FEATURES } = await loadConditions();
+    expect(Object.keys(CONDITION_FEATURES)).toEqual(['native', 'maxify']);
     expect(CONDITION_FEATURES.native).toEqual([]);
-    expect(CONDITION_FEATURES['caveman+graphify']).toEqual(['caveman', 'graphify-mcp']);
-    expect(CAVEMAN_CONDITIONS.sort()).toEqual(['caveman', 'caveman+graphify', 'caveman+graphify-cli']);
+    expect(CONDITION_FEATURES.maxify).toEqual(['maxify']);
   });
 
   it('configures maxify as a stdio MCP server rooted at the workspace with isolated state', async () => {
@@ -98,32 +94,8 @@ describe('conditions', () => {
     expect(contribution.allowedTools).toEqual(['mcp__maxify']);
   });
 
-  it('enables caveman only through project settings (or --plugin-dir), never global files', async () => {
+  it('leaves native untouched', async () => {
     const { contributionsFor } = await loadConditions();
-    const viaSettings = contributionsFor('caveman', ctx, ALL_FEATURES);
-    expect(viaSettings.settings).toEqual({ enabledPlugins: { 'caveman@caveman': true } });
-    expect(viaSettings.extraArgs).toEqual([]);
-    const viaDir = contributionsFor('caveman', { ...ctx, cavemanLoad: 'plugin-dir' }, ALL_FEATURES);
-    expect(viaDir.extraArgs).toEqual(['--plugin-dir', ALL_FEATURES.caveman?.installPath]);
-  });
-
-  it('wires graphify through its MCP server or its CLI, graph inside the workspace', async () => {
-    const { contributionsFor } = await loadConditions();
-    const mcp = contributionsFor('graphify', ctx, ALL_FEATURES);
-    expect(mcp.mcpServers.graphify?.command).toBe('graphify-mcp');
-    expect(mcp.mcpServers.graphify?.args).toEqual([path.join(ctx.workspace, 'graphify-out', 'graph.json')]);
-    expect(mcp.allowedTools).toEqual(['mcp__graphify']);
-    expect(mcp.claudeMdLines.join('\n')).toContain('graphify');
-    const cli = contributionsFor('graphify-cli', ctx, ALL_FEATURES);
-    expect(cli.mcpServers).toEqual({});
-    expect(cli.allowedTools).toEqual(['Bash(graphify:*)']);
-  });
-
-  it('combines features and leaves native untouched', async () => {
-    const { contributionsFor } = await loadConditions();
-    const combo = contributionsFor('caveman+graphify', ctx, ALL_FEATURES);
-    expect(Object.keys(combo.mcpServers)).toEqual(['graphify']);
-    expect(combo.settings).toHaveProperty('enabledPlugins');
     expect(contributionsFor('native', ctx, ALL_FEATURES)).toEqual({ settings: {}, mcpServers: {}, claudeMdLines: [], allowedTools: [], extraArgs: [], env: {} });
   });
 
@@ -133,10 +105,10 @@ describe('conditions', () => {
     for (const name of ALL_CONDITIONS) {
       const contribution = contributionsFor(name, ctx, ALL_FEATURES);
       const strings = JSON.stringify(contribution).toLowerCase().replaceAll('\\\\', '\\');
-      // Paths a condition may mention: the workspace, the temp state, the repository, node, and the read-only plugin cache.
+      // Paths a condition may mention: the workspace, the temp state, the repository and node.
       const mentionsHomeConfig = strings.includes(path.join(home, '.claude').toLowerCase()) || strings.includes('.claude.json');
       expect(mentionsHomeConfig, name).toBe(false);
-      expect(Object.keys(contribution.settings).every((key) => key === 'enabledPlugins'), name).toBe(true);
+      expect(contribution.settings, name).toEqual({});
     }
   });
 
@@ -159,24 +131,17 @@ describe('conditions', () => {
     expect(verifyConditionLoaded('maxify', init({ mcpServers: [{ name: 'maxify', status: 'connected' }], tools: ['Read', 'mcp__maxify__maxify_context'] })).loaded).toBe(true);
     expect(verifyConditionLoaded('maxify', init({ mcpServers: [{ name: 'maxify', status: 'failed' }], tools: ['mcp__maxify__maxify_context'] })).problems[0]).toMatch(/status is failed/);
     expect(verifyConditionLoaded('maxify', init({ mcpServers: [{ name: 'maxify', status: 'connected' }] })).problems.join()).toMatch(/no mcp__maxify__\* tools/);
-    expect(verifyConditionLoaded('graphify', init({ mcpServers: [{ name: 'graphify', status: 'connected' }], tools: ['mcp__graphify__query_graph'] })).loaded).toBe(true);
-    expect(verifyConditionLoaded('caveman', init({ plugins: ['caveman'] })).loaded).toBe(true);
-    expect(verifyConditionLoaded('caveman', init({ slashCommands: ['caveman:caveman'] })).loaded).toBe(true);
-    expect(verifyConditionLoaded('caveman', init({})).loaded).toBe(false);
   });
 
   it('marks a condition unavailable when any of its features is, and says why', async () => {
     const { describeCondition } = await loadConditions();
     const features: Record<string, FeatureInfo> = {
-      ...ALL_FEATURES,
-      'graphify-mcp': { available: false, reason: 'mcp package missing', version: 'graphify 0.9.92' },
+      maxify: { available: false, reason: 'dist/cli.js not found' },
     };
-    expect(describeCondition('graphify', features)).toMatchObject({ available: false });
-    expect(describeCondition('graphify', features).reason).toContain('mcp package missing');
-    expect(describeCondition('caveman+graphify', features).available).toBe(false);
-    expect(describeCondition('graphify-cli', features).available).toBe(true);
-    expect(describeCondition('maxify', features).available).toBe(true);
-    expect(describeCondition('caveman', features).usesCaveman).toBe(true);
+    expect(describeCondition('maxify', features)).toMatchObject({ available: false });
+    expect(describeCondition('maxify', features).reason).toContain('dist/cli.js not found');
+    expect(describeCondition('native', features).available).toBe(true);
+    expect(describeCondition('maxify', ALL_FEATURES).available).toBe(true);
     expect(() => describeCondition('nope', features)).toThrow(/Unknown condition/);
   });
 });
@@ -369,12 +334,12 @@ describe('workspace helpers', () => {
     const { mergeSettings } = await loadWorkspace();
     const merged = mergeSettings(
       { hooks: { PreToolUse: [{ matcher: 'Bash|Grep' }] }, keep: 1 },
-      { hooks: { PreToolUse: [{ matcher: 'Bash|Grep' }, { matcher: 'Read' }] }, enabledPlugins: { 'caveman@caveman': true } },
+      { hooks: { PreToolUse: [{ matcher: 'Bash|Grep' }, { matcher: 'Read' }] }, enabledPlugins: { 'example@example': true } },
     );
     expect(merged).toEqual({
       hooks: { PreToolUse: [{ matcher: 'Bash|Grep' }, { matcher: 'Read' }] },
       keep: 1,
-      enabledPlugins: { 'caveman@caveman': true },
+      enabledPlugins: { 'example@example': true },
     });
   });
 
@@ -401,12 +366,9 @@ describe('safety of the harness sources', () => {
     }
   });
 
-  it('touches the user home only to read the plugin registry', () => {
+  it('never touches the user home', () => {
     const users = files.filter((file) => /homedir\(\)/.test(readFileSync(file, 'utf8')));
-    expect(users.map((file) => path.basename(file))).toEqual(['conditions.mjs']);
-    const text = readFileSync(path.join(AGENT_DIR, 'lib', 'conditions.mjs'), 'utf8');
-    const lines = text.split('\n').filter((line) => /homedir\(\)/.test(line));
-    for (const line of lines) expect(line).not.toMatch(/write|mkdir|rm|append|copy|rename/i);
+    expect(users.map((file) => path.basename(file))).toEqual([]);
   });
 
   it('spawns a long-running child only from lib/claude.mjs, and only execute.mjs and run.mjs drive runs', () => {
@@ -467,13 +429,12 @@ describe('run.mjs dry run (default)', () => {
     expect(stdout).not.toMatch(/dangerously/);
   }, 120_000);
 
-  it('lists every condition with its availability and keeps caveman out of the default selection', () => {
+  it('lists every condition with its availability and selects the available ones by default', () => {
     const { stdout } = runCli(['--tasks', 'default-page-size']);
-    for (const name of ['native', 'caveman', 'graphify', 'caveman+graphify', 'maxify']) expect(stdout).toContain(name);
-    expect(stdout).toMatch(/caveman .*(opt-in|UNAVAILABLE)/);
+    for (const name of ['native', 'maxify']) expect(stdout).toContain(name);
     const jobs = /Jobs: (\d+)/.exec(stdout);
-    // At most native, graphify, graphify-cli and maxify: the caveman conditions are never selected by default.
-    expect(Number(jobs?.[1])).toBeLessThanOrEqual(4);
+    // At most native and maxify (maxify needs a build).
+    expect(Number(jobs?.[1])).toBeLessThanOrEqual(2);
   }, 120_000);
 
   it('rejects unknown tasks, conditions and bad option values with exit code 2', () => {

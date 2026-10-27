@@ -178,16 +178,11 @@ describe('failure handling and the spend stop-loss', () => {
     expect(exhausted.records[0]).toMatchObject({ status: 'max-turns', valid: true });
   });
 
-  it('marks a run invalid when the requested condition did not load', () => {
-    // The stand-in only lists MCP servers present in .mcp.json, so a condition whose server is missing there is detected.
-    const result = harness('plugin', ['--tasks', 'explain-plugin-loading', '--conditions', 'caveman'], { FAKE_CLAUDE_ANSWER: answer });
-    // Without the caveman plugin installed the harness refuses the condition; with it, the stand-in sees enabledPlugins.
-    if (result.status === 0) {
-      expect(result.records[0]).toMatchObject({ conditionLoaded: true, valid: true });
-      expect(result.log[0]?.settings).toEqual({ enabledPlugins: { 'caveman@caveman': true } });
-    } else {
-      expect(result.status).toBe(2);
-      expect(result.stderr).toMatch(/Unavailable condition/);
-    }
+  it.skipIf(!maxifyBuilt)('marks a run invalid when the requested condition did not load', () => {
+    // FAKE_CLAUDE_DROP_MCP makes the stand-in report no MCP servers, as if the maxify server failed to start.
+    const result = harness('not-loaded', ['--tasks', 'explain-plugin-loading', '--conditions', 'maxify'], { FAKE_CLAUDE_ANSWER: answer, FAKE_CLAUDE_DROP_MCP: '1' });
+    expect(result.status).toBe(0);
+    expect(result.records[0]).toMatchObject({ conditionLoaded: false, valid: false });
+    expect(result.records[0]?.invalidReasons.join(' ')).toMatch(/condition not loaded: MCP server "maxify" missing/);
   });
 });

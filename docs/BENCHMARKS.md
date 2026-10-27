@@ -53,13 +53,13 @@ Both native strategies are deterministic simulations that rank with information 
 
 `bench/agent/` runs Claude Code headless (`claude -p … --output-format stream-json`) on fresh copies of the fixture with hidden tests. Each task was verified both ways: the hidden test fails after the setup patch and passes with the reference solution.
 
-- **Conditions**: native, caveman (4.0.1 plugin), graphify-cli (0.9.92), caveman+graphify-cli, maxify. `graphify` via MCP is unavailable on the dev machine because its pipx install lacks the `mcp` extra (`pipx inject graphifyy mcp` fixes it; the harness installs nothing).
+- **Conditions**: `native` (Claude Code with its built-in tools only) and `maxify` (the same plus the Maxify MCP server).
 - **Tasks**: add-task-labels, assign-task, default-page-size (tiny, overhead case), diagnose-token-expiry, explain-plugin-loading, fix-failing-status-rules, rename-and-reopen.
 - **Isolation**: `--setting-sources project`, `--strict-mcp-config`, config written only inside each temporary copy; user-level settings and global config are untouched.
 - **Metrics**: hidden-test pass rate, provider-reported input/output/cache tokens, `total_cost_usd`, turns, tool calls by name, tokens per solved task; cold vs warm cache recorded separately; a condition with fewer tokens but fewer solved tasks than native is flagged **REGRESSION**.
 - **Safety**: dry-run by default; `--confirm-spend` is required, with a per-run cap (`--max-budget-usd`, default $2) and a total stop-loss ($25).
 
-The default plan is 21 runs (7 tasks × the 3 default conditions × 1 repetition). It has not been executed because it spends the user's Claude usage. Recommended next step: a pilot with one tiny task and the `native` and `maxify` conditions, then extrapolate cost from `total_cost_usd`.
+The default plan is 14 runs (7 tasks × the 2 conditions × 1 repetition). It has not been executed because it spends the user's Claude usage. Recommended next step: a pilot with one tiny task and the `native` and `maxify` conditions, then extrapolate cost from `total_cost_usd`.
 
 ```bash
 node bench/agent/run.mjs                      # dry run: plan and run count
