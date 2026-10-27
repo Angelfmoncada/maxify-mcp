@@ -48,7 +48,26 @@ export function assertSafeRoot(root: string): void {
   }
 }
 
-const WINDOWS_DEVICE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)(\..*)?$/i;
+/** Real path of the deepest existing ancestor plus the remaining (not yet existing) segments. */
+function canonicalize(absolute: string): string {
+  const rest: string[] = [];
+  let current = absolute;
+  for (;;) {
+    if (existsSync(current)) {
+      try {
+        return path.join(realpath(current), ...rest);
+      } catch {
+        return absolute;
+      }
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return absolute;
+    rest.unshift(path.basename(current));
+    current = parent;
+  }
+}
+
+const WINDOWS_DEVICE =/^(con|prn|aux|nul|com[0-9]|lpt[0-9]|conin\$|conout\$)(\..*)?$/i;
 
 /**
  * Windows path aliases that could reach a file under a name the exclusion
@@ -106,12 +125,15 @@ export class RepoGuard {
       throw new MaxifyError('INVALID_INPUT', 'Path is empty or contains a NUL byte.');
     }
     const cleaned = input.replace(/^file:\/\//, '');
-    if (process.platform === 'win32') assertPlainWindowsPath(cleaned, input);
-    const absolute = path.resolve(this.root, cleaned);
+    const resolved = path.resolve(this.root, cleaned);
+    // Absolute inputs may spell the root differently (8.3 short names, case): compare canonical forms.
+    const absolute = path.isAbsolute(cleaned) ? canonicalize(resolved) : resolved;
     const rel = this.relIfInside(absolute);
     if (rel === null) {
       throw new MaxifyError('OUT_OF_ROOT', `Path "${input}" is outside the repository root.`);
     }
+    // Alias forms only matter inside the repository, where exclusion patterns apply.
+    if (process.platform === 'win32') assertPlainWindowsPath(rel, input);
     if (existsSync(absolute)) {
       const real = realpath(absolute);
       if (this.relIfInside(real) === null) {

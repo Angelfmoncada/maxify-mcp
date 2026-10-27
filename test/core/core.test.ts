@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -91,7 +91,7 @@ describe('roots and state', () => {
     const repo = path.join(tmp, 'gitrepo');
     mkdirSync(path.join(repo, '.git'), { recursive: true });
     mkdirSync(path.join(repo, 'pkg', 'src'), { recursive: true });
-    expect(findRepoRoot(path.join(repo, 'pkg', 'src')).toLowerCase()).toBe(path.resolve(repo).toLowerCase());
+    expect(findRepoRoot(path.join(repo, 'pkg', 'src')).toLowerCase()).toBe(realpathSync.native(repo).toLowerCase());
   });
 
   it('refuses the filesystem root and the home directory', () => {
